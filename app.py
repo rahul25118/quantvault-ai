@@ -1,8 +1,8 @@
 import os
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 from sklearn.metrics import roc_curve
 from quant_engine import (
@@ -32,26 +32,27 @@ html, body, [class*="css"] {
 }
 
 .stApp {
-    background: radial-gradient(circle at 15% 10%, #0E192F 0%, #070B14 55%, #05080F 100%);
+    background: radial-gradient(circle at 12% 8%, #101D36 0%, #060A13 52%, #04070D 100%);
     color: #E2E8F0;
 }
 
 .block-container {
-    padding-top: 1.2rem;
+    padding-top: 1.1rem;
     padding-bottom: 2rem;
     padding-left: 1.5rem;
     padding-right: 1.5rem;
     max-width: 100%;
 }
 
+/* Institutional Hero Banner */
 .qv-hero {
-    background: linear-gradient(135deg, rgba(14, 23, 42, 0.92) 0%, rgba(11, 18, 33, 0.96) 100%);
-    border: 1px solid rgba(0, 240, 255, 0.25);
+    background: linear-gradient(135deg, rgba(15, 25, 46, 0.94) 0%, rgba(9, 15, 28, 0.98) 100%);
+    border: 1px solid rgba(0, 240, 255, 0.28);
     border-left: 4px solid #00F0FF;
     border-radius: 12px;
-    padding: 1.15rem 1.45rem;
-    margin-bottom: 1.15rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    padding: 1.1rem 1.4rem;
+    margin-bottom: 0.85rem;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
 }
 
 .qv-badge {
@@ -65,11 +66,11 @@ html, body, [class*="css"] {
     padding: 0.2rem 0.65rem;
     border-radius: 999px;
     letter-spacing: 0.08em;
-    margin-bottom: 0.45rem;
+    margin-bottom: 0.4rem;
 }
 
 .qv-title {
-    font-size: 1.8rem;
+    font-size: 1.78rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     color: #F8FAFC;
@@ -78,28 +79,54 @@ html, body, [class*="css"] {
 
 .qv-subtitle {
     color: #94A3B8;
-    font-size: 0.9rem;
-    margin-top: 0.3rem;
+    font-size: 0.88rem;
+    margin-top: 0.25rem;
     margin-bottom: 0;
 }
 
-[data-testid="stMetric"] {
-    background: linear-gradient(145deg, rgba(16, 24, 43, 0.88), rgba(10, 16, 30, 0.95));
+/* Live Bloomberg-Style Telemetry Strip */
+.ticker-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    align-items: center;
+    background: rgba(11, 18, 33, 0.92);
     border: 1px solid rgba(148, 163, 184, 0.16);
-    border-top: 2px solid rgba(0, 240, 255, 0.45);
+    border-radius: 9px;
+    padding: 0.55rem 1.1rem;
+    margin-bottom: 1.1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+}
+
+.ticker-item {
+    color: #CBD5E1;
+}
+
+.ticker-val {
+    color: #00F0FF;
+    font-weight: 700;
+}
+
+/* Glassmorphic KPI Cards */
+[data-testid="stMetric"] {
+    background: linear-gradient(145deg, rgba(17, 26, 46, 0.90), rgba(9, 15, 28, 0.96));
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-top: 2px solid rgba(0, 240, 255, 0.5);
     border-radius: 12px;
     padding: 0.85rem 1rem;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-    transition: transform 0.18s ease, border-color 0.18s ease;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.38);
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 [data-testid="stMetric"]:hover {
     transform: translateY(-2px);
-    border-color: rgba(0, 240, 255, 0.55);
+    border-color: rgba(0, 240, 255, 0.65);
+    box-shadow: 0 10px 26px rgba(0, 240, 255, 0.12);
 }
 
 [data-testid="stMetricLabel"] {
-    font-size: 0.78rem !important;
+    font-size: 0.76rem !important;
     font-weight: 600 !important;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -109,7 +136,7 @@ html, body, [class*="css"] {
 
 [data-testid="stMetricValue"] {
     font-family: 'JetBrains Mono', monospace !important;
-    font-size: 1.48rem !important;
+    font-size: 1.45rem !important;
     font-weight: 700 !important;
     color: #F8FAFC !important;
     white-space: normal !important;
@@ -117,59 +144,67 @@ html, body, [class*="css"] {
 
 [data-testid="stMetricDelta"] {
     font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.78rem !important;
+    font-size: 0.76rem !important;
 }
 
+/* Regime Alert Cards */
 .regime-card-danger {
-    background: linear-gradient(90deg, rgba(255, 59, 92, 0.16) 0%, rgba(15, 23, 42, 0.92) 100%);
+    background: linear-gradient(120deg, rgba(255, 59, 92, 0.18) 0%, rgba(13, 20, 36, 0.95) 100%);
     border: 1px solid rgba(255, 59, 92, 0.45);
     border-left: 5px solid #FF3B5C;
-    border-radius: 10px;
-    padding: 0.95rem 1.2rem;
-    margin-bottom: 1.05rem;
+    border-radius: 12px;
+    padding: 1.15rem 1.3rem;
+    height: 100%;
     color: #FFE4E6;
 }
 
 .regime-card-safe {
-    background: linear-gradient(90deg, rgba(0, 230, 118, 0.14) 0%, rgba(15, 23, 42, 0.92) 100%);
-    border: 1px solid rgba(0, 230, 118, 0.4);
+    background: linear-gradient(120deg, rgba(0, 230, 118, 0.15) 0%, rgba(13, 20, 36, 0.95) 100%);
+    border: 1px solid rgba(0, 230, 118, 0.42);
     border-left: 5px solid #00E676;
-    border-radius: 10px;
-    padding: 0.95rem 1.2rem;
-    margin-bottom: 1.05rem;
+    border-radius: 12px;
+    padding: 1.15rem 1.3rem;
+    height: 100%;
     color: #DCFCE7;
 }
 
+/* Wrapped Institutional Tabs */
 .stTabs [data-baseweb="tab-list"] {
     display: flex;
     flex-wrap: wrap;
     gap: 0.45rem;
-    background-color: rgba(11, 18, 33, 0.85);
+    background-color: rgba(11, 18, 33, 0.88);
     padding: 0.45rem;
     border-radius: 10px;
-    border: 1px solid rgba(148, 163, 184, 0.15);
+    border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .stTabs [data-baseweb="tab"] {
     border-radius: 7px;
-    padding: 0.42rem 0.8rem;
+    padding: 0.42rem 0.82rem;
     color: #94A3B8;
     font-weight: 600;
     font-size: 0.83rem;
 }
 
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, rgba(0, 240, 255, 0.18), rgba(0, 150, 255, 0.15)) !important;
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.20), rgba(0, 140, 255, 0.16)) !important;
     color: #00F0FF !important;
-    border: 1px solid rgba(0, 240, 255, 0.4) !important;
+    border: 1px solid rgba(0, 240, 255, 0.45) !important;
 }
 
+/* News Feed Cards */
 .news-card {
-    background: rgba(13, 21, 38, 0.85);
-    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(13, 21, 38, 0.88);
+    border: 1px solid rgba(148, 163, 184, 0.15);
     border-radius: 9px;
-    padding: 0.75rem 1rem;
+    padding: 0.78rem 1rem;
     margin-bottom: 0.6rem;
+    transition: border-color 0.15s ease;
+}
+
+.news-card:hover {
+    border-color: rgba(0, 240, 255, 0.45);
 }
 
 .news-card a {
@@ -223,35 +258,99 @@ causal = econ_res["causal_ate"]
 garch_s = econ_res["garch_summary"]
 default_alloc = compute_portfolio_risk_allocation(500000.0, 1.0, brief, sent_res["news_fear_index"])
 
-st.markdown(f"#### 📡 Live Autonomous Risk Brief &nbsp; `CLOSE: {brief['as_of_date']}`")
-is_elevated = (default_alloc["multimodal_risk_pct"] >= brief["alert_thresh_pct"]) or (brief["latest_vix"] > causal["vix_threshold"])
+# Live Telemetry Strip
+st.markdown(
+    f"""
+    <div class="ticker-strip">
+        <span class="ticker-item">CLOSE: <span class="ticker-val">{brief['as_of_date']}</span></span>
+        <span class="ticker-item">INDIA VIX: <span class="ticker-val">{brief['latest_vix']}</span></span>
+        <span class="ticker-item">GARCH VOL: <span class="ticker-val">{brief['latest_garch_vol']}%</span></span>
+        <span class="ticker-item">95% ACI CAP: <span class="ticker-val">{brief['aci_upper_95']}%</span></span>
+        <span class="ticker-item">MULTIMODAL RISK: <span class="ticker-val">{default_alloc['multimodal_risk_pct']}%</span></span>
+        <span class="ticker-item">OPTIMAL EQUITY: <span class="ticker-val">{default_alloc['recommended_equity_pct']}%</span></span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-if is_elevated:
-    st.markdown(
-        f"""
-        <div class="regime-card-danger">
-            <strong>🚨 ELEVATED TAIL-RISK REGIME DETECTED</strong><br>
-            Quant Tail-Risk Probability is <strong>{brief['tail_risk_prob']}%</strong> &nbsp;|&nbsp;
-            Multimodal Risk Score (Quant + NLP News): <strong>{default_alloc['multimodal_risk_pct']}%</strong>
-            (Alert Cutoff: {brief['alert_thresh_pct']}%) &nbsp;|&nbsp;
-            Recommended Equity Exposure: <strong>{default_alloc['recommended_equity_pct']}%</strong>
-        </div>
-        """,
-        unsafe_allow_html=True,
+# Top Row: Regime Diagnostic Card + Live Interactive Risk Gauge Speedometer
+is_elevated = (default_alloc["multimodal_risk_pct"] >= brief["alert_thresh_pct"]) or (brief["latest_vix"] > causal["vix_threshold"])
+top_left, top_right = st.columns([1.65, 1])
+
+with top_left:
+    if is_elevated:
+        st.markdown(
+            f"""
+            <div class="regime-card-danger">
+                <div style="font-family:'JetBrains Mono',monospace; font-size:0.78rem; color:#FF8FA3; margin-bottom:0.35rem;">
+                    REGIME STATUS: ELEVATED TAIL-RISK ALERT
+                </div>
+                <div style="font-size:1.15rem; font-weight:700; margin-bottom:0.55rem;">
+                    🚨 Defensive Capital Preservation Mode Active
+                </div>
+                <div style="font-size:0.9rem; line-height:1.55;">
+                    • <strong>Quant Tail-Risk Probability:</strong> {brief['tail_risk_prob']}% (Alert Cutoff: {brief['alert_thresh_pct']}%)<br>
+                    • <strong>Multimodal Risk Score (Quant + NLP News):</strong> {default_alloc['multimodal_risk_pct']}%<br>
+                    • <strong>Recommended Equity Allocation:</strong> {default_alloc['recommended_equity_pct']}% &nbsp;|&nbsp; <strong>Safe Cash/Hedge:</strong> {default_alloc['safe_cash_pct']}%
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f"""
+            <div class="regime-card-safe">
+                <div style="font-family:'JetBrains Mono',monospace; font-size:0.78rem; color:#6EE7B7; margin-bottom:0.35rem;">
+                    REGIME STATUS: NORMAL VOLATILITY ENVELOPE
+                </div>
+                <div style="font-size:1.15rem; font-weight:700; margin-bottom:0.55rem;">
+                    ✅ Standard Risk-Budget Deployment Active
+                </div>
+                <div style="font-size:0.9rem; line-height:1.55;">
+                    • <strong>Quant Tail-Risk Probability:</strong> {brief['tail_risk_prob']}% (Alert Cutoff: {brief['alert_thresh_pct']}%)<br>
+                    • <strong>Multimodal Risk Score (Quant + NLP News):</strong> {default_alloc['multimodal_risk_pct']}%<br>
+                    • <strong>Recommended Equity Allocation:</strong> {default_alloc['recommended_equity_pct']}% &nbsp;|&nbsp; <strong>Safe Cash/Hedge:</strong> {default_alloc['safe_cash_pct']}%
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+with top_right:
+    fig_gauge = go.Figure(go.Indicator(
+        mode="gauge+number+delta",
+        value=default_alloc["multimodal_risk_pct"],
+        number={"suffix": "%", "font": {"size": 28, "color": "#F8FAFC", "family": "JetBrains Mono"}},
+        delta={"reference": brief["alert_thresh_pct"], "increasing": {"color": "#FF3B5C"}, "decreasing": {"color": "#00E676"}},
+        title={"text": "Multimodal Tail-Risk Meter", "font": {"size": 13, "color": "#94A3B8"}},
+        gauge={
+            "axis": {"range": [0, 100], "tickwidth": 1, "tickcolor": "#64748B"},
+            "bar": {"color": "#00F0FF", "thickness": 0.28},
+            "bgcolor": "#0B1221",
+            "borderwidth": 1,
+            "bordercolor": "#1E293B",
+            "steps": [
+                {"range": [0, 30], "color": "rgba(0, 230, 118, 0.22)"},
+                {"range": [30, 60], "color": "rgba(251, 191, 36, 0.22)"},
+                {"range": [60, 100], "color": "rgba(255, 59, 92, 0.25)"},
+            ],
+            "threshold": {
+                "line": {"color": "#FF3B5C", "width": 3},
+                "thickness": 0.8,
+                "value": brief["alert_thresh_pct"],
+            },
+        },
+    ))
+    fig_gauge.update_layout(
+        height=185,
+        margin=dict(l=20, r=20, t=35, b=10),
+        paper_bgcolor="rgba(13, 20, 36, 0.92)",
+        font={"color": "#E2E8F0"},
     )
-else:
-    st.markdown(
-        f"""
-        <div class="regime-card-safe">
-            <strong>✅ NORMAL VOLATILITY REGIME</strong><br>
-            Quant Tail-Risk Probability is <strong>{brief['tail_risk_prob']}%</strong> &nbsp;|&nbsp;
-            Multimodal Risk Score (Quant + NLP News): <strong>{default_alloc['multimodal_risk_pct']}%</strong>
-            (Alert Cutoff: {brief['alert_thresh_pct']}%) &nbsp;|&nbsp;
-            Recommended Equity Exposure: <strong>{default_alloc['recommended_equity_pct']}%</strong>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.plotly_chart(fig_gauge, use_container_width=True)
+
+st.write("")
 
 # Full 8 Glassmorphic KPI Cards (4 + 4 Institutional Grid)
 r1_c1, r1_c2, r1_c3, r1_c4 = st.columns(4)
@@ -279,54 +378,92 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "7. Telegram Bot Alerts"
 ])
 
-def style_dark_ax(ax, fig):
-    fig.patch.set_facecolor("#0B1221")
-    ax.set_facecolor("#0E172A")
-    ax.tick_params(colors="#94A3B8", labelsize=9)
-    ax.xaxis.label.set_color("#CBD5E1")
-    ax.yaxis.label.set_color("#CBD5E1")
-    ax.title.set_color("#F8FAFC")
-    for spine in ax.spines.values():
-        spine.set_color("#1E293B")
-    ax.grid(True, linestyle="--", linewidth=0.5, color="#1E293B", alpha=0.8)
-
+# --- TAB 1: INTERACTIVE PLOTLY ACI VOLATILITY & ROC ---
 with tab1:
     col_a, col_b = st.columns([2, 1])
     with col_a:
-        fig1, ax1 = plt.subplots(figsize=(10, 4.5))
-        style_dark_ax(ax1, fig1)
-        ax1.plot(ml_res["dates_test"], ml_res["y_reg_test"], color="#00F0FF", linewidth=1.3, alpha=0.9, label="Actual |Nifty Return| (%)")
-        ax1.plot(ml_res["dates_test"], ml_res["test_reg_preds"], color="#FBBF24", linestyle="--", linewidth=1.2, label="Point Forecast")
-        ax1.fill_between(
-            ml_res["dates_test"], ml_res["aci_lower_95"], ml_res["aci_upper_95"],
-            color="#FF3B5C", alpha=0.25, label=f"95% Adaptive Conformal Band (Cov: {metrics['aci_cov_95']}%)"
+        fig1 = go.Figure()
+        fig1.add_trace(go.Scatter(
+            x=ml_res["dates_test"],
+            y=ml_res["aci_upper_95"],
+            mode="lines",
+            line=dict(width=0),
+            name="95% ACI Upper Bound",
+            showlegend=False,
+        ))
+        fig1.add_trace(go.Scatter(
+            x=ml_res["dates_test"],
+            y=ml_res["aci_lower_95"],
+            mode="lines",
+            line=dict(width=0),
+            fill="tonexty",
+            fillcolor="rgba(255, 59, 92, 0.22)",
+            name=f"95% Adaptive Conformal Band (Cov: {metrics['aci_cov_95']}%)",
+        ))
+        fig1.add_trace(go.Scatter(
+            x=ml_res["dates_test"],
+            y=ml_res["y_reg_test"],
+            mode="lines",
+            line=dict(color="#00F0FF", width=1.6),
+            name="Actual |Nifty Return| (%)",
+        ))
+        fig1.add_trace(go.Scatter(
+            x=ml_res["dates_test"],
+            y=ml_res["test_reg_preds"],
+            mode="lines",
+            line=dict(color="#FBBF24", width=1.3, dash="dash"),
+            name="Point Forecast (%)",
+        ))
+        fig1.update_layout(
+            title="Out-of-Sample Volatility & 95% Adaptive Conformal Interval (Interactive)",
+            yaxis_title="Daily Absolute Return (%)",
+            hovermode="x unified",
+            height=430,
+            paper_bgcolor="#0B1221",
+            plot_bgcolor="#0E172A",
+            font=dict(color="#E2E8F0"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            xaxis=dict(gridcolor="#1E293B"),
+            yaxis=dict(gridcolor="#1E293B"),
+            margin=dict(l=45, r=20, t=55, b=40),
         )
-        ax1.set_title("Out-of-Sample Volatility & 95% Adaptive Conformal Interval", fontweight="bold")
-        ax1.set_ylabel("Daily Absolute Return (%)")
-        leg1 = ax1.legend(loc="upper right", facecolor="#0B1221", edgecolor="#334155")
-        for text in leg1.get_texts():
-            text.set_color("#E2E8F0")
-        st.pyplot(fig1)
+        st.plotly_chart(fig1, use_container_width=True)
 
     with col_b:
-        fig2, ax2 = plt.subplots(figsize=(5, 4.5))
-        style_dark_ax(ax2, fig2)
         fpr, tpr, _ = roc_curve(ml_res["y_clf_test"], ml_res["test_clf_probs"])
-        ax2.plot(fpr, tpr, color="#00E676", linewidth=2.2, label=f"Tail-Risk RF (AUC = {metrics['oos_auc']})")
-        ax2.plot([0, 1], [0, 1], color="#64748B", linestyle="--")
-        ax2.set_title("Out-of-Sample Tail-Risk ROC", fontweight="bold")
-        ax2.set_xlabel("False Positive Rate")
-        ax2.set_ylabel("True Positive Rate")
-        leg2 = ax2.legend(loc="lower right", facecolor="#0B1221", edgecolor="#334155")
-        for text in leg2.get_texts():
-            text.set_color("#E2E8F0")
-        st.pyplot(fig2)
+        fig2 = go.Figure()
+        fig2.add_trace(go.Scatter(
+            x=fpr, y=tpr, mode="lines",
+            line=dict(color="#00E676", width=2.5),
+            fill="tozeroy", fillcolor="rgba(0, 230, 118, 0.12)",
+            name=f"Tail-Risk RF (AUC = {metrics['oos_auc']})"
+        ))
+        fig2.add_trace(go.Scatter(
+            x=[0, 1], y=[0, 1], mode="lines",
+            line=dict(color="#64748B", dash="dash"),
+            name="Random Baseline"
+        ))
+        fig2.update_layout(
+            title="Out-of-Sample Tail-Risk ROC",
+            xaxis_title="False Positive Rate",
+            yaxis_title="True Positive Rate",
+            height=430,
+            paper_bgcolor="#0B1221",
+            plot_bgcolor="#0E172A",
+            font=dict(color="#E2E8F0"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            xaxis=dict(gridcolor="#1E293B"),
+            yaxis=dict(gridcolor="#1E293B"),
+            margin=dict(l=45, r=20, t=55, b=40),
+        )
+        st.plotly_chart(fig2, use_container_width=True)
 
     st.info(
         f"**Non-Stationarity Recovery Audit:** Static Split Conformal coverage degraded to **{metrics['static_cov_95']}%** "
         f"under regime shifts, whereas online **Adaptive Conformal Inference (ACI)** restored empirical coverage to **{metrics['aci_cov_95']}%**."
     )
 
+# --- TAB 2: ECONOMETRICS & CAUSAL ATE ---
 with tab2:
     st.markdown("### Orthogonalized Double ML Causal Impact")
     st.write(
@@ -345,24 +482,67 @@ with tab2:
         st.markdown("**Granger Causality Lead-Lag Tests**")
         st.dataframe(econ_res["granger_df"], use_container_width=True)
 
+# --- TAB 3: INTERACTIVE PLOTLY CONTAGION NETWORK ---
 with tab3:
-    col_g1, col_g2 = st.columns([1.4, 1])
+    col_g1, col_g2 = st.columns([1.45, 1])
     with col_g1:
         G = econ_res["graph"]
         strength = econ_res["node_strength"]
-        fig3, ax3 = plt.subplots(figsize=(7, 5))
-        fig3.patch.set_facecolor("#0B1221")
-        ax3.set_facecolor("#0B1221")
         pos = nx.circular_layout(G)
-        edge_colors = ["#FF3B5C" if d["weight"] < 0 else "#00F0FF" for _, _, d in G.edges(data=True)]
-        edge_widths = [abs(d["weight"]) * 6.5 for _, _, d in G.edges(data=True)]
-        node_sizes = [750 + strength[n] * 950 for n in G.nodes()]
-        nx.draw_networkx_nodes(G, pos, ax=ax3, node_size=node_sizes, node_color="#1E293B", edgecolors="#00F0FF", linewidths=2)
-        nx.draw_networkx_edges(G, pos, ax=ax3, width=edge_widths, edge_color=edge_colors, alpha=0.85)
-        nx.draw_networkx_labels(G, pos, ax=ax3, font_size=9.5, font_weight="bold", font_color="#F8FAFC")
-        ax3.set_title("Systemic Contagion Network (Precision Partial Correlations)", fontweight="bold", color="#F8FAFC")
-        ax3.axis("off")
-        st.pyplot(fig3)
+
+        edge_traces = []
+        for u, v, d in G.edges(data=True):
+            x0, y0 = pos[u]
+            x1, y1 = pos[v]
+            w = d["weight"]
+            edge_color = "#FF3B5C" if w < 0 else "#00F0FF"
+            edge_traces.append(go.Scatter(
+                x=[x0, x1, None],
+                y=[y0, y1, None],
+                mode="lines",
+                line=dict(width=max(1.5, abs(w) * 9), color=edge_color),
+                hoverinfo="none",
+                showlegend=False,
+            ))
+
+        node_x, node_y, node_text, node_hover, node_sizes = [], [], [], [], []
+        for n in G.nodes():
+            x, y = pos[n]
+            node_x.append(x)
+            node_y.append(y)
+            node_text.append(n)
+            node_hover.append(f"<b>{n}</b><br>Contagion Strength: {strength[n]:.4f}")
+            node_sizes.append(28 + strength[n] * 36)
+
+        node_trace = go.Scatter(
+            x=node_x,
+            y=node_y,
+            mode="markers+text",
+            text=node_text,
+            textposition="top center",
+            textfont=dict(color="#F8FAFC", size=12, family="Inter"),
+            hovertext=node_hover,
+            hoverinfo="text",
+            marker=dict(
+                size=node_sizes,
+                color="#0F172A",
+                line=dict(width=2.5, color="#00F0FF"),
+            ),
+            showlegend=False,
+        )
+
+        fig3 = go.Figure(data=edge_traces + [node_trace])
+        fig3.update_layout(
+            title="Interactive Systemic Contagion Graph (Cyan = Positive | Crimson = Inverse Spillover)",
+            height=450,
+            paper_bgcolor="#0B1221",
+            plot_bgcolor="#0B1221",
+            font=dict(color="#E2E8F0"),
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-1.35, 1.35]),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-1.35, 1.35]),
+            margin=dict(l=20, r=20, t=50, b=20),
+        )
+        st.plotly_chart(fig3, use_container_width=True)
 
     with col_g2:
         st.markdown("**Systemic Hub Contagion Strength**")
@@ -370,8 +550,20 @@ with tab3:
             sorted(strength.items(), key=lambda x: x[1], reverse=True),
             columns=["Asset / Macro Node", "Conditional Contagion Strength"]
         )
-        st.dataframe(hub_df, use_container_width=True)
+        st.dataframe(
+            hub_df,
+            use_container_width=True,
+            column_config={
+                "Conditional Contagion Strength": st.column_config.ProgressColumn(
+                    "Contagion Strength",
+                    format="%.4f",
+                    min_value=0.0,
+                    max_value=float(hub_df["Conditional Contagion Strength"].max()) if not hub_df.empty else 1.0,
+                )
+            },
+        )
 
+# --- TAB 4: LIVE NEWS & NLP SENTIMENT ---
 with tab4:
     st.markdown("### Real-Time Indian Equity Headlines & NLP Sentiment Index")
     s1, s2, s3 = st.columns(3)
@@ -396,6 +588,7 @@ with tab4:
     else:
         st.warning("Live RSS news feed temporarily unavailable; econometric models remain active.")
 
+# --- TAB 5: PORTFOLIO POSITION SIZING & CVaR ---
 with tab5:
     st.markdown("### Dynamic Position Sizing & 95% ACI Tail-Loss (CVaR) Calculator")
     st.write("Adjust your total capital and daily risk budget to compute volatility-targeted & tail-risk-adjusted equity exposure.")
@@ -416,6 +609,7 @@ with tab5:
         f"(instead of **₹{alloc['unhedged_aci_loss_inr']:,.0f}** if 100% invested)."
     )
 
+# --- TAB 6: WHAT-IF MACRO STRESS SIMULATOR ---
 with tab6:
     st.markdown("### Interactive What-If Macro & Volatility Stress Simulator")
     st.write("Simulate sudden macro shocks to inspect how our Causal Double-ML & Conformal models re-price next-day market risk.")
@@ -435,6 +629,7 @@ with tab6:
         f"Causal VIX Cutoff: {causal['vix_threshold']}"
     )
 
+# --- TAB 7: AUTONOMOUS TELEGRAM RISK ALERTS ---
 with tab7:
     st.markdown("### Autonomous Morning Telegram Risk Alert Bot")
     st.write(
