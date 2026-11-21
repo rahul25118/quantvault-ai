@@ -1,4 +1,3 @@
-import io
 import os
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -7,14 +6,10 @@ import pandas as pd
 import streamlit as st
 from sklearn.metrics import roc_curve
 from quant_engine import (
-    analyze_custom_portfolio_cvar,
     compute_portfolio_risk_allocation,
     engineer_quant_features,
     fetch_live_macro_news,
     fetch_live_market_data,
-    generate_institutional_pdf_tearsheet,
-    optimize_nifty_put_hedge,
-    run_aci_strategy_backtest,
     run_econometric_and_causal_suite,
     score_news_sentiment,
     send_telegram_risk_alert,
@@ -148,7 +143,7 @@ html, body, [class*="css"] {
 .stTabs [data-baseweb="tab-list"] {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.42rem;
+    gap: 0.45rem;
     background-color: rgba(11, 18, 33, 0.85);
     padding: 0.45rem;
     border-radius: 10px;
@@ -157,10 +152,10 @@ html, body, [class*="css"] {
 
 .stTabs [data-baseweb="tab"] {
     border-radius: 7px;
-    padding: 0.4rem 0.75rem;
+    padding: 0.42rem 0.8rem;
     color: #94A3B8;
     font-weight: 600;
-    font-size: 0.82rem;
+    font-size: 0.83rem;
 }
 
 .stTabs [aria-selected="true"] {
@@ -193,10 +188,10 @@ st.markdown(terminal_css, unsafe_allow_html=True)
 st.markdown(
     """
     <div class="qv-hero">
-        <div class="qv-badge">● INSTITUTIONAL HEDGE-FUND DESK &nbsp;|&nbsp; GARCH(1,1)-t • DOUBLE ML • ACI • NLP • BSM OPTIONS</div>
+        <div class="qv-badge">● AUTONOMOUS QUANT TERMINAL &nbsp;|&nbsp; GARCH(1,1)-t • DOUBLE ML • ACI • NLP FUSION</div>
         <h1 class="qv-title">QuantVault AI — Institutional Risk & Decision Intelligence</h1>
         <p class="qv-subtitle">
-            End-to-end Indian equity tail-risk telemetry, multi-asset CVaR attribution, OOS strategy backtesting, options tail-hedging, and automated PDF reporting.
+            Real-time Indian equity tail-risk quantification, causal macro regime diagnostics, precision contagion networks, and dynamic CVaR position sizing.
         </p>
     </div>
     """,
@@ -217,11 +212,10 @@ def load_full_pipeline(period: str, gamma: float):
     ml_res = train_and_evaluate_conformal_engine(feat_df, model_df, gamma=gamma)
     raw_news = fetch_live_macro_news(limit=12)
     sentiment_res = score_news_sentiment(raw_news)
-    bt_res = run_aci_strategy_backtest(model_df, ml_res, target_vol_pct=1.0)
-    return df_clean, model_df, econ_res, ml_res, sentiment_res, bt_res
+    return df_clean, model_df, econ_res, ml_res, sentiment_res
 
 with st.spinner("Initializing QuantVault Institutional Terminal & live econometric pipelines..."):
-    df_clean, model_df, econ_res, ml_res, sent_res, bt_res = load_full_pipeline(lookback_period, aci_gamma)
+    df_clean, model_df, econ_res, ml_res, sent_res = load_full_pipeline(lookback_period, aci_gamma)
 
 brief = ml_res["live_brief"]
 metrics = ml_res["metrics"]
@@ -229,20 +223,7 @@ causal = econ_res["causal_ate"]
 garch_s = econ_res["garch_summary"]
 default_alloc = compute_portfolio_risk_allocation(500000.0, 1.0, brief, sent_res["news_fear_index"])
 
-# Top Action Bar with Instant PDF Tear-Sheet Download
-hdr_col1, hdr_col2 = st.columns([3, 1])
-with hdr_col1:
-    st.markdown(f"#### 📡 Live Autonomous Risk Brief &nbsp; `CLOSE: {brief['as_of_date']}`")
-with hdr_col2:
-    pdf_bytes = generate_institutional_pdf_tearsheet(brief, causal, garch_s, metrics, default_alloc, sent_res, bt_res)
-    st.download_button(
-        label="📄 Download Executive Risk Tear-Sheet (PDF)",
-        data=pdf_bytes,
-        file_name=f"QuantVault_Risk_TearSheet_{brief['as_of_date']}.pdf",
-        mime="application/pdf",
-        use_container_width=True,
-    )
-
+st.markdown(f"#### 📡 Live Autonomous Risk Brief &nbsp; `CLOSE: {brief['as_of_date']}`")
 is_elevated = (default_alloc["multimodal_risk_pct"] >= brief["alert_thresh_pct"]) or (brief["latest_vix"] > causal["vix_threshold"])
 
 if is_elevated:
@@ -288,17 +269,14 @@ r2_c4.metric("95% ACI 1-Day Max Loss", f"₹{default_alloc['hedged_aci_loss_inr'
 
 st.write("")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "1. Adaptive Conformal Band",
     "2. Econometrics & Causal ATE",
     "3. Contagion Network",
     "4. Live News & NLP Fusion",
     "5. Portfolio Sizing & CVaR",
     "6. What-If Stress Lab",
-    "7. Telegram Bot Alerts",
-    "8. Multi-Asset Portfolio CSV",
-    "9. Strategy Backtest Proof",
-    "10. Options Tail-Hedge Lab"
+    "7. Telegram Bot Alerts"
 ])
 
 def style_dark_ax(ax, fig):
@@ -477,86 +455,6 @@ with tab7:
         st.markdown("1. Open Telegram, search **`@BotFather`** and send `/newbot` to get your **Bot Token** (then send `/start` to your new bot).")
         st.markdown("2. Search **`@userinfobot`** and send `/start` to copy your numeric **Chat ID**.")
         st.markdown("3. Paste both above and click **Send Instant Risk Brief to Telegram Now**.")
-
-# --- TAB 8: MULTI-ASSET PORTFOLIO CSV UPLOAD & LIVE BETA / CVaR ATTRIBUTION ---
-with tab8:
-    st.markdown("### Multi-Asset Portfolio CSV Upload & Component 95% CVaR Attribution")
-    st.write("Upload a CSV with `ticker` and `weight` columns (e.g., `RELIANCE, 25`) or test with our institutional NSE large-cap basket.")
-
-    sample_df = pd.DataFrame({
-        "ticker": ["RELIANCE", "HDFCBANK", "ICICIBANK", "INFY", "TCS", "LT"],
-        "weight": [22, 20, 18, 15, 13, 12]
-    })
-
-    up_col1, up_col2 = st.columns([2, 1])
-    with up_col1:
-        uploaded_csv = st.file_uploader("Upload Portfolio Holdings CSV (`ticker`, `weight`)", type=["csv"])
-    with up_col2:
-        st.download_button(
-            "📥 Download Sample CSV Template",
-            data=sample_df.to_csv(index=False).encode("utf-8"),
-            file_name="sample_nse_portfolio.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-
-    active_holdings = pd.read_csv(uploaded_csv) if uploaded_csv is not None else sample_df
-    try:
-        with st.spinner("Computing live stock-level Nifty Beta & Component 95% CVaR..."):
-            port_audit = analyze_custom_portfolio_cvar(active_holdings, period="1y")
-
-        pa1, pa2, pa3 = st.columns(3)
-        pa1.metric("Portfolio Nifty Beta", f"{port_audit['portfolio_beta']}x", "1.00x = Market Neutral Beta")
-        pa2.metric("Annualized Portfolio Vol", f"{port_audit['portfolio_ann_vol']}%", "1-Year Realized")
-        pa3.metric("Portfolio 1-Day 95% CVaR", f"{port_audit['portfolio_cvar_95']}%", "Expected Tail-Day Loss")
-
-        st.dataframe(port_audit["attribution_df"], use_container_width=True)
-    except Exception as e:
-        st.error(f"Portfolio Attribution Error: {e}")
-
-# --- TAB 9: OUT-OF-SAMPLE STRATEGY BACKTEST PROOF ---
-with tab9:
-    st.markdown("### Out-of-Sample Strategy Backtest: 100% Nifty vs QuantVault ACI Dynamic Sizing")
-    st.write("Empirical proof comparing passive Nifty Buy-and-Hold against online Adaptive Conformal + Volatility-Targeted risk sizing.")
-
-    bh_s = bt_res["bh_stats"]
-    qv_s = bt_res["qv_stats"]
-
-    b1, b2, b3, b4 = st.columns(4)
-    b1.metric("QuantVault Sharpe Ratio", f"{qv_s['sharpe']}", f"vs {bh_s['sharpe']} Buy & Hold")
-    b2.metric("QuantVault Sortino Ratio", f"{qv_s['sortino']}", f"vs {bh_s['sortino']} Buy & Hold")
-    b3.metric("QuantVault Max Drawdown", f"{qv_s['max_dd_pct']}%", f"Saves {bt_res['dd_reduction_pct']}% Drawdown")
-    b4.metric("Avg Active Equity Weight", f"{bt_res['avg_equity_weight_pct']}%", "Remainder in Liquid Yield")
-
-    fig_bt, ax_bt = plt.subplots(figsize=(10.5, 4.3))
-    style_dark_ax(ax_bt, fig_bt)
-    ax_bt.plot(bt_res["dates"], bt_res["bh_equity"], color="#94A3B8", linestyle="--", linewidth=1.4, label=f"100% Nifty Buy & Hold (Max DD: {bh_s['max_dd_pct']}%)")
-    ax_bt.plot(bt_res["dates"], bt_res["qv_equity"], color="#00E676", linewidth=2.0, label=f"QuantVault ACI Risk-Managed (Max DD: {qv_s['max_dd_pct']}%)")
-    ax_bt.set_title("Out-of-Sample Cumulative Wealth Curve (Base = 100)", fontweight="bold")
-    ax_bt.set_ylabel("Portfolio Index Value")
-    leg_bt = ax_bt.legend(loc="upper left", facecolor="#0B1221", edgecolor="#334155")
-    for text in leg_bt.get_texts():
-        text.set_color("#E2E8F0")
-    st.pyplot(fig_bt)
-
-# --- TAB 10: BLACK-SCHOLES OPTIONS TAIL-HEDGE OPTIMIZER ---
-with tab10:
-    st.markdown("### Options Tail-Hedge Strike & Cost Optimizer (Black-Scholes-Merton)")
-    st.write("Compute optimal OTM Nifty Put protection contracts and hedging cost (in bps) using live India VIX implied volatility.")
-
-    latest_spot = float(df_clean["nifty_close"].iloc[-1]) if "nifty_close" in df_clean.columns else 24200.0
-    o1, o2, o3 = st.columns(3)
-    hedge_cap = o1.number_input("Portfolio Value to Hedge (INR ₹)", min_value=100000, max_value=500000000, value=2500000, step=100000)
-    otm_offset = o2.slider("Put Strike OTM Buffer (%)", 0.5, 6.0, 2.0, 0.5)
-    dte_days = o3.slider("Days to Expiry (DTE)", 2, 30, 7, 1)
-
-    opt_res = optimize_nifty_put_hedge(latest_spot, float(brief["latest_vix"]), float(hedge_cap), otm_offset, dte_days)
-
-    oc1, oc2, oc3, oc4 = st.columns(4)
-    oc1.metric("Recommended Put Strike", f"{opt_res['recommended_strike']} PE", f"Spot: {opt_res['spot_nifty']}")
-    oc2.metric("Est. BSM Put Premium", f"₹{opt_res['put_premium_pts']}", f"Delta: {opt_res['put_delta']}")
-    oc3.metric("Total Hedge Cost", f"₹{opt_res['total_hedge_cost_inr']:,.0f}", f"{opt_res['hedge_cost_bps']} bps ({opt_res['lots_required']} lots)")
-    oc4.metric("5% Crash Net Loss", f"₹{opt_res['hedged_5pct_crash_loss']:,.0f}", f"vs ₹{opt_res['unhedged_5pct_crash_loss']:,.0f} Unhedged")
 
 st.divider()
 disclaimer_html = (
