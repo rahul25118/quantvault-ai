@@ -584,11 +584,19 @@ def analyze_custom_portfolio_cvar(holdings_df: pd.DataFrame, period: str = "1y")
 def run_aci_strategy_backtest(model_df: pd.DataFrame, ml_res: dict, target_vol_pct: float = 1.0) -> dict:
     # Out-of-sample equity curve comparison: 100% Buy-and-Hold Nifty vs QuantVault ACI Dynamic Sizing
     test_dates = pd.to_datetime(ml_res["dates_test"])
-    df_bt = model_df.reindex(test_dates).dropna(subset=["nifty_ret"]).copy()
+    ret_candidates = [c for c in model_df.columns if "nifty" in c.lower() and ("ret" in c.lower() or "pct" in c.lower())]
+    if not ret_candidates:
+        ret_candidates = [c for c in model_df.columns if "nifty" in c.lower() and "abs" not in c.lower()]
+    if not ret_candidates:
+        ret_candidates = [model_df.columns[0]]
+
+    ret_col = ret_candidates[0]
+    df_bt = model_df.reindex(test_dates).dropna(subset=[ret_col]).copy()
     n = min(len(df_bt), len(ml_res["test_clf_probs"]), len(ml_res["aci_upper_95"]))
     df_bt = df_bt.iloc[:n].copy()
 
-    nifty_rets = df_bt["nifty_ret"].values / 100.0
+    raw_vals = df_bt[ret_col].values.astype(float)
+    nifty_rets = raw_vals / 100.0 if np.nanmax(np.abs(raw_vals)) > 0.35 else raw_vals
     probs = np.array(ml_res["test_clf_probs"][:n]) * 100.0
     aci_up = np.maximum(np.array(ml_res["aci_upper_95"][:n]), 0.50)
 
