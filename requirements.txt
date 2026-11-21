@@ -9,3 +9,5 @@ arch>=7.0.0
 networkx>=3.2.0
 matplotlib>=3.8.0
 requests>=2.31.0
+fastapi
+uvicorn

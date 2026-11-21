@@ -155,3 +155,17 @@ with tab4:
             st.caption(f"Published: {item['published']}")
     else:
         st.warning("Live RSS news feed temporarily unavailable; econometric models remain active.")
+
+
+st.divider()
+st.markdown(
+    """
+    <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(148,163,184,0.18); border-radius:8px; padding:0.85rem 1.1rem; font-size:0.78rem; color:#94A3B8;">
+        <strong style="color:#E2E8F0;">INSTITUTIONAL & REGULATORY DISCLAIMER (NON-ADVISORY RISK SOFTWARE):</strong>
+        QuantVault AI is a quantitative risk telemetry, econometric modeling, and stress-testing software infrastructure.
+        Outputs (GARCH volatility, Double ML causal estimates, Adaptive Conformal bounds, and CVaR sizing metrics) are statistical risk diagnostics
+        for institutional/educational decision support only and do not constitute SEBI-registered investment advice, research recommendations, or solicitation to buy/sell securities.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
