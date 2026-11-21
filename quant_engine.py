@@ -700,6 +700,11 @@ def optimize_nifty_put_hedge(
     }
 
 
+def _safe_pdf_text(val) -> str:
+    s = str(val).replace("\u2013", "-").replace("\u2014", "-").replace("\u2011", "-").replace("\u2022", "|").replace("\u20b9", "INR ")
+    return s.encode("latin-1", errors="ignore").decode("latin-1")
+
+
 def generate_institutional_pdf_tearsheet(
     brief: dict,
     causal: dict,
@@ -709,7 +714,7 @@ def generate_institutional_pdf_tearsheet(
     sent_res: dict,
     bt_res: dict,
 ) -> bytes:
-    # Generates a clean 1-page Institutional Risk Tear-Sheet PDF in memory
+    # Generates a clean 1-page Institutional Risk Tear-Sheet PDF in memory (strictly latin-1 safe)
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=12)
@@ -719,16 +724,21 @@ def generate_institutional_pdf_tearsheet(
     pdf.set_text_color(0, 240, 255)
     pdf.set_font("Helvetica", "B", 16)
     pdf.set_xy(12, 8)
-    pdf.cell(0, 8, "QUANTVAULT AI - INSTITUTIONAL RISK TEAR-SHEET", ln=True)
+    pdf.cell(0, 8, _safe_pdf_text("QUANTVAULT AI - INSTITUTIONAL RISK TEAR-SHEET"), ln=True)
     pdf.set_text_color(203, 213, 225)
     pdf.set_font("Helvetica", "", 9.5)
     pdf.set_x(12)
-    pdf.cell(0, 6, f"Market Close: {brief['as_of_date']}  |  GARCH(1,1)-t | Double ML Causal | Adaptive Conformal Inference", ln=True)
+    pdf.cell(
+        0,
+        6,
+        _safe_pdf_text(f"Market Close: {brief['as_of_date']}  |  GARCH(1,1)-t | Double ML Causal | Adaptive Conformal Inference"),
+        ln=True,
+    )
 
     pdf.ln(10)
     pdf.set_text_color(15, 23, 42)
     pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "1. Live Market & Tail-Risk Telemetry", ln=True)
+    pdf.cell(0, 8, _safe_pdf_text("1. Live Market & Tail-Risk Telemetry"), ln=True)
     pdf.set_font("Helvetica", "", 10)
     rows_telemetry = [
         ("India VIX Level", f"{brief['latest_vix']} (Causal Regime Cutoff: {causal['vix_threshold']})"),
@@ -739,24 +749,27 @@ def generate_institutional_pdf_tearsheet(
     ]
     for k, v in rows_telemetry:
         pdf.set_font("Helvetica", "B", 9.5)
-        pdf.cell(72, 7, k, border=1)
+        pdf.cell(72, 7, _safe_pdf_text(k), border=1)
         pdf.set_font("Helvetica", "", 9.5)
-        pdf.cell(114, 7, v, border=1, ln=True)
+        pdf.cell(114, 7, _safe_pdf_text(v), border=1, ln=True)
 
     pdf.ln(5)
     pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "2. Causal Macro Impact & Portfolio Allocation Guidance", ln=True)
+    pdf.cell(0, 8, _safe_pdf_text("2. Causal Macro Impact & Portfolio Allocation Guidance"), ln=True)
     pdf.set_font("Helvetica", "", 9.5)
     pdf.multi_cell(
-        0, 5.5,
-        f"Orthogonalized Double ML confirms that entering an Elevated VIX Regime (>{causal['vix_threshold']}) causally increases "
-        f"next-day Nifty tail-risk probability by +{causal['ate_pct']}% (p = {causal['p_value']}). "
-        f"Recommended Equity Allocation: {alloc['recommended_equity_pct']}% | Safe Cash/Liquid Hedge: {alloc['safe_cash_pct']}%."
+        0,
+        5.5,
+        _safe_pdf_text(
+            f"Orthogonalized Double ML confirms that entering an Elevated VIX Regime (>{causal['vix_threshold']}) causally increases "
+            f"next-day Nifty tail-risk probability by +{causal['ate_pct']}% (p = {causal['p_value']}). "
+            f"Recommended Equity Allocation: {alloc['recommended_equity_pct']}% | Safe Cash/Liquid Hedge: {alloc['safe_cash_pct']}%."
+        ),
     )
 
     pdf.ln(4)
     pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, "3. Out-of-Sample Strategy Backtest Audit (Buy & Hold vs QuantVault ACI)", ln=True)
+    pdf.cell(0, 8, _safe_pdf_text("3. Out-of-Sample Strategy Backtest Audit (Buy & Hold vs QuantVault ACI)"), ln=True)
     bh = bt_res["bh_stats"]
     qv = bt_res["qv_stats"]
     bt_rows = [
@@ -766,16 +779,19 @@ def generate_institutional_pdf_tearsheet(
     ]
     for k, v in bt_rows:
         pdf.set_font("Helvetica", "B", 9.5)
-        pdf.cell(72, 7, k, border=1)
+        pdf.cell(72, 7, _safe_pdf_text(k), border=1)
         pdf.set_font("Helvetica", "", 9.5)
-        pdf.cell(114, 7, v, border=1, ln=True)
+        pdf.cell(114, 7, _safe_pdf_text(v), border=1, ln=True)
 
     pdf.ln(6)
     pdf.set_font("Helvetica", "I", 8)
     pdf.set_text_color(100, 116, 139)
     pdf.multi_cell(
-        0, 4.5,
-        "REGULATORY DISCLAIMER: QuantVault AI is a non-advisory quantitative risk telemetry & stress-testing software infrastructure. "
-        "Outputs are statistical diagnostics for institutional decision support only and do not constitute SEBI-registered investment advice."
+        0,
+        4.5,
+        _safe_pdf_text(
+            "REGULATORY DISCLAIMER: QuantVault AI is a non-advisory quantitative risk telemetry & stress-testing software infrastructure. "
+            "Outputs are statistical diagnostics for institutional decision support only and do not constitute SEBI-registered investment advice."
+        ),
     )
     return bytes(pdf.output())
