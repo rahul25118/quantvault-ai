@@ -496,3 +496,263 @@ def send_telegram_risk_alert(bot_token: str, chat_id: str, live_brief: dict, all
         return False, f"Telegram API Error ({r.status_code}): {r.text}"
     except Exception as e:
         return False, f"Network Error: {e}"
+
+
+# ==============================================================================
+# HEDGE-FUND SUITE: MULTI-ASSET CVaR, STRATEGY BACKTEST, BSM HEDGE & PDF REPORT
+# ==============================================================================
+from math import erf, exp, log, sqrt
+from fpdf import FPDF
+
+
+def _norm_cdf(x: float) -> float:
+    return 0.5 * (1.0 + erf(x / sqrt(2.0)))
+
+
+def analyze_custom_portfolio_cvar(holdings_df: pd.DataFrame, period: str = "1y") -> dict:
+    # Computes live Nifty Beta, Volatility, and Component 95% CVaR for user-uploaded equity portfolios
+    df_h = holdings_df.copy()
+    df_h.columns = [c.strip().lower() for c in df_h.columns]
+    if "ticker" not in df_h.columns or "weight" not in df_h.columns:
+        raise ValueError("CSV must contain 'ticker' and 'weight' columns.")
+
+    df_h["ticker"] = df_h["ticker"].astype(str).str.strip().str.upper()
+    df_h["ticker_yf"] = df_h["ticker"].apply(lambda t: t if t.endswith(".NS") or t.startswith("^") else f"{t}.NS")
+    df_h["weight"] = pd.to_numeric(df_h["weight"], errors="coerce").fillna(0.0)
+    df_h = df_h[df_h["weight"] > 0].copy()
+    if df_h.empty:
+        raise ValueError("No valid positive weights found in portfolio.")
+    df_h["weight"] = df_h["weight"] / df_h["weight"].sum()
+
+    tickers = df_h["ticker_yf"].tolist() + ["^NSEI"]
+    raw = yf.download(tickers, period=period, progress=False, auto_adjust=True)["Close"]
+    if isinstance(raw, pd.Series):
+        raw = raw.to_frame(name=tickers[0])
+    rets = raw.pct_change().dropna() * 100.0
+
+    nifty_ret = rets["^NSEI"]
+    nifty_var = float(np.var(nifty_ret)) if float(np.var(nifty_ret)) > 0 else 1.0
+
+    valid_cols = [c for c in df_h["ticker_yf"] if c in rets.columns]
+    if not valid_cols:
+        raise ValueError("Could not fetch live NSE prices for provided tickers.")
+
+    df_h = df_h[df_h["ticker_yf"].isin(valid_cols)].copy()
+    df_h["weight"] = df_h["weight"] / df_h["weight"].sum()
+
+    port_ret = sum(rets[row["ticker_yf"]] * row["weight"] for _, row in df_h.iterrows())
+    var_95_cutoff = float(np.percentile(port_ret, 5))
+    tail_days = port_ret <= var_95_cutoff
+    port_cvar_95 = float(abs(port_ret[tail_days].mean())) if tail_days.sum() > 0 else float(abs(var_95_cutoff))
+    port_vol_ann = float(port_ret.std() * np.sqrt(252))
+    port_beta = float(np.cov(port_ret, nifty_ret)[0, 1] / nifty_var)
+
+    rows = []
+    raw_contrib = []
+    for _, row in df_h.iterrows():
+        col = row["ticker_yf"]
+        w = float(row["weight"])
+        s_ret = rets[col]
+        beta_i = float(np.cov(s_ret, nifty_ret)[0, 1] / nifty_var)
+        vol_i = float(s_ret.std() * np.sqrt(252))
+        tail_loss_i = float(abs(s_ret[tail_days].mean())) if tail_days.sum() > 0 else float(abs(np.percentile(s_ret, 5)))
+        contrib_i = w * tail_loss_i
+        raw_contrib.append(contrib_i)
+        rows.append({
+            "Ticker": row["ticker"],
+            "Weight (%)": round(w * 100.0, 2),
+            "Nifty Beta": round(beta_i, 2),
+            "Ann. Volatility (%)": round(vol_i, 2),
+            "Tail-Day Avg Loss (%)": round(tail_loss_i, 2),
+            "_raw_cvar": contrib_i,
+        })
+
+    total_cvar_sum = sum(raw_contrib) if sum(raw_contrib) > 0 else 1.0
+    for r in rows:
+        r["Risk Contribution (%)"] = round((r["_raw_cvar"] / total_cvar_sum) * 100.0, 2)
+        del r["_raw_cvar"]
+
+    attr_df = pd.DataFrame(rows).sort_values("Risk Contribution (%)", ascending=False)
+    return {
+        "portfolio_beta": round(port_beta, 2),
+        "portfolio_ann_vol": round(port_vol_ann, 2),
+        "portfolio_cvar_95": round(port_cvar_95, 2),
+        "attribution_df": attr_df,
+    }
+
+
+def run_aci_strategy_backtest(model_df: pd.DataFrame, ml_res: dict, target_vol_pct: float = 1.0) -> dict:
+    # Out-of-sample equity curve comparison: 100% Buy-and-Hold Nifty vs QuantVault ACI Dynamic Sizing
+    test_dates = pd.to_datetime(ml_res["dates_test"])
+    df_bt = model_df.reindex(test_dates).dropna(subset=["nifty_ret"]).copy()
+    n = min(len(df_bt), len(ml_res["test_clf_probs"]), len(ml_res["aci_upper_95"]))
+    df_bt = df_bt.iloc[:n].copy()
+
+    nifty_rets = df_bt["nifty_ret"].values / 100.0
+    probs = np.array(ml_res["test_clf_probs"][:n]) * 100.0
+    aci_up = np.maximum(np.array(ml_res["aci_upper_95"][:n]), 0.50)
+
+    vol_scalar = np.minimum((target_vol_pct * 1.65) / aci_up, 1.0)
+    tail_haircut = np.maximum(0.20, 1.0 - (probs / 100.0) * 0.85)
+    weights = np.clip(vol_scalar * tail_haircut, 0.15, 1.0)
+
+    # Risk-free overnight liquid yield ~ 6.25% p.a. on uninvested cash
+    rf_daily = 0.0625 / 252.0
+    strat_rets = weights * nifty_rets + (1.0 - weights) * rf_daily
+
+    bh_equity = 100.0 * np.cumprod(1.0 + nifty_rets)
+    qv_equity = 100.0 * np.cumprod(1.0 + strat_rets)
+
+    def _perf_stats(r_arr, eq_arr):
+        ann_ret = (eq_arr[-1] / 100.0) ** (252.0 / max(len(r_arr), 1)) - 1.0
+        ann_vol = np.std(r_arr) * np.sqrt(252.0)
+        sharpe = (ann_ret - 0.0625) / ann_vol if ann_vol > 0 else 0.0
+        downside = r_arr[r_arr < 0]
+        down_vol = np.std(downside) * np.sqrt(252.0) if len(downside) > 0 else ann_vol
+        sortino = (ann_ret - 0.0625) / down_vol if down_vol > 0 else 0.0
+        running_max = np.maximum.accumulate(eq_arr)
+        max_dd = float(np.min((eq_arr - running_max) / running_max)) * 100.0
+        return {
+            "ann_return_pct": round(ann_ret * 100.0, 2),
+            "ann_vol_pct": round(ann_vol * 100.0, 2),
+            "sharpe": round(sharpe, 2),
+            "sortino": round(sortino, 2),
+            "max_dd_pct": round(max_dd, 2),
+        }
+
+    bh_stats = _perf_stats(nifty_rets, bh_equity)
+    qv_stats = _perf_stats(strat_rets, qv_equity)
+    dd_reduction = round(abs(bh_stats["max_dd_pct"]) - abs(qv_stats["max_dd_pct"]), 2)
+
+    return {
+        "dates": df_bt.index,
+        "bh_equity": bh_equity,
+        "qv_equity": qv_equity,
+        "avg_equity_weight_pct": round(float(np.mean(weights) * 100.0), 1),
+        "bh_stats": bh_stats,
+        "qv_stats": qv_stats,
+        "dd_reduction_pct": dd_reduction,
+    }
+
+
+def optimize_nifty_put_hedge(
+    spot_nifty: float,
+    vix_level: float,
+    capital_inr: float,
+    otm_pct: float = 2.0,
+    days_to_expiry: int = 7,
+    risk_free_rate: float = 0.065,
+) -> dict:
+    # Black-Scholes-Merton European Put pricing & tail-hedge cost estimator
+    S = max(float(spot_nifty), 1000.0)
+    K = round((S * (1.0 - otm_pct / 100.0)) / 50.0) * 50.0
+    T = max(days_to_expiry, 1) / 365.0
+    sigma = max(float(vix_level) / 100.0, 0.08)
+
+    d1 = (log(S / K) + (risk_free_rate + 0.5 * sigma * sigma) * T) / (sigma * sqrt(T))
+    d2 = d1 - sigma * sqrt(T)
+    put_price = K * exp(-risk_free_rate * T) * _norm_cdf(-d2) - S * _norm_cdf(-d1)
+    put_delta = _norm_cdf(d1) - 1.0
+
+    notional_per_lot = S * 75.0
+    lots_needed = max(1, int(round(capital_inr / notional_per_lot)))
+    total_hedge_cost_inr = round(put_price * 75.0 * lots_needed, 0)
+    hedge_cost_bps = round((total_hedge_cost_inr / max(capital_inr, 1.0)) * 10000.0, 1)
+
+    crash_spot = S * 0.95
+    unhedged_5pct_loss = round(capital_inr * 0.05, 0)
+    put_payoff_5pct = max(0.0, K - crash_spot) * 75.0 * lots_needed
+    net_protected_loss = round(max(0.0, unhedged_5pct_loss - put_payoff_5pct + total_hedge_cost_inr), 0)
+
+    return {
+        "spot_nifty": round(S, 1),
+        "recommended_strike": int(K),
+        "put_premium_pts": round(put_price, 2),
+        "put_delta": round(put_delta, 3),
+        "lots_required": lots_needed,
+        "total_hedge_cost_inr": total_hedge_cost_inr,
+        "hedge_cost_bps": hedge_cost_bps,
+        "unhedged_5pct_crash_loss": unhedged_5pct_loss,
+        "hedged_5pct_crash_loss": net_protected_loss,
+    }
+
+
+def generate_institutional_pdf_tearsheet(
+    brief: dict,
+    causal: dict,
+    garch_s: dict,
+    metrics: dict,
+    alloc: dict,
+    sent_res: dict,
+    bt_res: dict,
+) -> bytes:
+    # Generates a clean 1-page Institutional Risk Tear-Sheet PDF in memory
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=12)
+
+    pdf.set_fill_color(11, 18, 33)
+    pdf.rect(0, 0, 210, 34, "F")
+    pdf.set_text_color(0, 240, 255)
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_xy(12, 8)
+    pdf.cell(0, 8, "QUANTVAULT AI - INSTITUTIONAL RISK TEAR-SHEET", ln=True)
+    pdf.set_text_color(203, 213, 225)
+    pdf.set_font("Helvetica", "", 9.5)
+    pdf.set_x(12)
+    pdf.cell(0, 6, f"Market Close: {brief['as_of_date']}  |  GARCH(1,1)-t • Double ML Causal • Adaptive Conformal Inference", ln=True)
+
+    pdf.ln(10)
+    pdf.set_text_color(15, 23, 42)
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "1. Live Market & Tail-Risk Telemetry", ln=True)
+    pdf.set_font("Helvetica", "", 10)
+    rows_telemetry = [
+        ("India VIX Level", f"{brief['latest_vix']} (Causal Regime Cutoff: {causal['vix_threshold']})"),
+        ("GARCH(1,1)-t Volatility", f"{brief['latest_garch_vol']}% (Persistence: {garch_s['persistence']})"),
+        ("95% Adaptive Conformal Bound", f"[0%, {brief['aci_upper_95']}%] (Empirical OOS Coverage: {metrics['aci_cov_95']}%)"),
+        ("Quant Tail-Risk Probability", f"{brief['tail_risk_prob']}% (OOS ROC-AUC: {metrics['oos_auc']})"),
+        ("Multimodal Risk (Quant + NLP)", f"{alloc['multimodal_risk_pct']}% (News Fear Index: {sent_res['news_fear_index']}/100)"),
+    ]
+    for k, v in rows_telemetry:
+        pdf.set_font("Helvetica", "B", 9.5)
+        pdf.cell(72, 7, k, border=1)
+        pdf.set_font("Helvetica", "", 9.5)
+        pdf.cell(114, 7, v, border=1, ln=True)
+
+    pdf.ln(5)
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "2. Causal Macro Impact & Portfolio Allocation Guidance", ln=True)
+    pdf.set_font("Helvetica", "", 9.5)
+    pdf.multi_cell(
+        0, 5.5,
+        f"Orthogonalized Double ML confirms that entering an Elevated VIX Regime (>{causal['vix_threshold']}) causally increases "
+        f"next-day Nifty tail-risk probability by +{causal['ate_pct']}% (p = {causal['p_value']}). "
+        f"Recommended Equity Allocation: {alloc['recommended_equity_pct']}% | Safe Cash/Liquid Hedge: {alloc['safe_cash_pct']}%."
+    )
+
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "3. Out-of-Sample Strategy Backtest Audit (Buy & Hold vs QuantVault ACI)", ln=True)
+    bh = bt_res["bh_stats"]
+    qv = bt_res["qv_stats"]
+    bt_rows = [
+        ("Benchmark: 100% Nifty Buy & Hold", f"Return: {bh['ann_return_pct']}% | Sharpe: {bh['sharpe']} | Max DD: {bh['max_dd_pct']}%"),
+        ("QuantVault ACI Dynamic Sizing", f"Return: {qv['ann_return_pct']}% | Sharpe: {qv['sharpe']} | Max DD: {qv['max_dd_pct']}%"),
+        ("Net Max Drawdown Reduction", f"{bt_res['dd_reduction_pct']}% capital drawdown saved across OOS regimes"),
+    ]
+    for k, v in bt_rows:
+        pdf.set_font("Helvetica", "B", 9.5)
+        pdf.cell(72, 7, k, border=1)
+        pdf.set_font("Helvetica", "", 9.5)
+        pdf.cell(114, 7, v, border=1, ln=True)
+
+    pdf.ln(6)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_text_color(100, 116, 139)
+    pdf.multi_cell(
+        0, 4.5,
+        "REGULATORY DISCLAIMER: QuantVault AI is a non-advisory quantitative risk telemetry & stress-testing software infrastructure. "
+        "Outputs are statistical diagnostics for institutional decision support only and do not constitute SEBI-registered investment advice."
+    )
+    return bytes(pdf.output())
