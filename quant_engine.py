@@ -66,64 +66,42 @@ def fetch_live_market_data(period: str = "5y") -> pd.DataFrame:
     return df
 
 def fetch_live_macro_news(limit: int = 15) -> list:
-    """Fetches real-time Indian market news from ET, LiveMint, Business Standard, Moneycontrol & Yahoo via cloud-safe feeds."""
+    """Fetches strictly current-week Indian equity & market headlines (hard-rejecting anything older than 7 days)."""
     from email.utils import parsedate_to_datetime
     headlines = []
     seen_titles = set()
+    now_utc = pd.Timestamp.now(tz="UTC")
 
-    # 1. Cloud-safe Google News RSS restricted strictly to top 4 Indian business dailies (last 2 days)
-    rss_queries = [
-        "https://news.google.com/rss/search?q=(Nifty+OR+Sensex+OR+stock+market)+(site:economictimes.indiatimes.com+OR+site:livemint.com)+when:2d&hl=en-IN&gl=IN&ceid=IN:en",
-        "https://news.google.com/rss/search?q=(Nifty+OR+Sensex+OR+FII+OR+economy)+(site:business-standard.com+OR+site:moneycontrol.com)+when:2d&hl=en-IN&gl=IN&ceid=IN:en",
+    rss_urls = [
+        "https://news.google.com/rss/search?q=Nifty+50+stock+market+India&hl=en-IN&gl=IN&ceid=IN:en&scoring=n",
+        "https://news.google.com/rss/search?q=Sensex+FII+DII+Indian+equities&hl=en-IN&gl=IN&ceid=IN:en&scoring=n",
+        "https://news.google.com/rss/search?q=Indian+economy+rupee+inflation+markets&hl=en-IN&gl=IN&ceid=IN:en&scoring=n",
     ]
-    for url in rss_queries:
+
+    for url in rss_urls:
         try:
             r = requests.get(url, timeout=10)
             root = ET.fromstring(r.content)
-            for item in root.findall(".//item")[:8]:
+            for item in root.findall(".//item")[:12]:
                 raw_title = item.find("title").text if item.find("title") is not None else ""
                 clean_title = raw_title.strip()
                 if not clean_title or clean_title.lower() in seen_titles:
                     continue
-                if any(skip in clean_title.lower() for skip in ["bulletin", "economic survey", "working paper"]):
+                if any(w in clean_title.lower() for w in ["bulletin", "economic survey", "working paper", "october", "september", "august"]):
                     continue
-                seen_titles.add(clean_title.lower())
-                link = item.find("link").text if item.find("link") is not None else ""
                 pub_date = item.find("pubDate").text if item.find("pubDate") is not None else ""
                 try:
                     dt = pd.Timestamp(parsedate_to_datetime(pub_date)).tz_convert("UTC")
                 except Exception:
-                    dt = pd.Timestamp.now(tz="UTC")
+                    continue
+                if (now_utc - dt).total_seconds() > 7 * 86400:
+                    continue
+                seen_titles.add(clean_title.lower())
+                link = item.find("link").text if item.find("link") is not None else ""
                 headlines.append({
                     "title": clean_title,
                     "link": link.strip(),
                     "published": pub_date,
-                    "dt": dt
-                })
-        except Exception:
-            continue
-
-    # 2. Yahoo Finance Live Ticker News Fallback/Supplement
-    for sym in ["^NSEI", "HDFCBANK.NS"]:
-        try:
-            yf_news = yf.Ticker(sym).news or []
-            for entry in yf_news[:4]:
-                content = entry.get("content") if isinstance(entry.get("content"), dict) else entry
-                clean_title = (content.get("title") or "").strip()
-                if not clean_title or clean_title.lower() in seen_titles:
-                    continue
-                seen_titles.add(clean_title.lower())
-                link_obj = content.get("canonicalUrl") or content.get("clickThroughUrl") or {}
-                link = link_obj.get("url") if isinstance(link_obj, dict) else (entry.get("link") or "https://finance.yahoo.com")
-                pub_str = content.get("pubDate") or ""
-                try:
-                    dt = pd.to_datetime(pub_str, utc=True) if pub_str else pd.Timestamp.now(tz="UTC")
-                except Exception:
-                    dt = pd.Timestamp.now(tz="UTC")
-                headlines.append({
-                    "title": f"[Yahoo Finance] {clean_title}",
-                    "link": link,
-                    "published": dt.strftime("%a, %d %b %Y %H:%M GMT"),
                     "dt": dt
                 })
         except Exception:
