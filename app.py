@@ -39,26 +39,27 @@ html, body, [class*="css"] {
 .block-container {
     padding-top: 1.1rem;
     padding-bottom: 2.2rem;
-    padding-left: 1.6rem;
-    padding-right: 1.6rem;
+    padding-left: 1.4rem;
+    padding-right: 1.4rem;
     max-width: 1440px;
 }
 
-/* Executive Command Bar (Aladdin / Marquee Precision Style) */
+/* Executive Command Bar */
 .amc-topbar {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
+    gap: 0.6rem;
     background-color: #131722;
     border: 1px solid #1E2533;
     border-radius: 8px;
-    padding: 0.9rem 1.35rem;
+    padding: 0.9rem 1.25rem;
     margin-bottom: 0.9rem;
 }
 
 .amc-brand-title {
-    font-size: 1.25rem;
+    font-size: 1.22rem;
     font-weight: 700;
     letter-spacing: -0.015em;
     color: #F8FAFC;
@@ -67,9 +68,9 @@ html, body, [class*="css"] {
 
 .amc-brand-sub {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     color: #64748B;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     margin-top: 0.15rem;
 }
@@ -77,15 +78,15 @@ html, body, [class*="css"] {
 .amc-status-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.65rem;
+    gap: 0.55rem;
     align-items: center;
 }
 
 .amc-pill {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    padding: 0.28rem 0.7rem;
+    padding: 0.25rem 0.65rem;
     border-radius: 5px;
     background-color: #191F2E;
     border: 1px solid #283246;
@@ -98,12 +99,12 @@ html, body, [class*="css"] {
     background-color: rgba(16, 185, 129, 0.08);
 }
 
-/* Swiss Precision KPI Cards */
+/* Swiss Precision KPI Cards (Zero Truncation) */
 [data-testid="stMetric"] {
     background-color: #131722;
     border: 1px solid #1E2533;
     border-radius: 8px;
-    padding: 0.9rem 1.05rem;
+    padding: 0.78rem 0.85rem;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
@@ -113,25 +114,28 @@ html, body, [class*="css"] {
 }
 
 [data-testid="stMetricLabel"] {
-    font-size: 0.74rem !important;
+    font-size: 0.69rem !important;
     font-weight: 600 !important;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
     color: #94A3B8 !important;
     white-space: normal !important;
+    line-height: 1.25 !important;
 }
 
 [data-testid="stMetricValue"] {
     font-family: 'IBM Plex Mono', monospace !important;
-    font-size: 1.45rem !important;
+    font-size: 1.25rem !important;
     font-weight: 600 !important;
     color: #F8FAFC !important;
     white-space: normal !important;
+    line-height: 1.3 !important;
 }
 
 [data-testid="stMetricDelta"] {
     font-family: 'IBM Plex Mono', monospace !important;
-    font-size: 0.75rem !important;
+    font-size: 0.71rem !important;
+    white-space: normal !important;
 }
 
 /* Executive Regime Panels */
@@ -140,7 +144,7 @@ html, body, [class*="css"] {
     border: 1px solid rgba(239, 68, 68, 0.4);
     border-left: 4px solid #EF4444;
     border-radius: 8px;
-    padding: 1.15rem 1.35rem;
+    padding: 1.1rem 1.25rem;
     height: 100%;
 }
 
@@ -149,35 +153,64 @@ html, body, [class*="css"] {
     border: 1px solid rgba(16, 185, 129, 0.35);
     border-left: 4px solid #10B981;
     border-radius: 8px;
-    padding: 1.15rem 1.35rem;
+    padding: 1.1rem 1.25rem;
     height: 100%;
 }
 
-/* Clean Institutional Tabs (All 7 Modules Always Visible) */
-.stTabs [data-baseweb="tab-list"] {
+/* Institutional Workstation Module Selector (All 7 Modules Wrap Cleanly on Every Screen) */
+div[role="radiogroup"] {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    gap: 0.45rem;
     background-color: #131722;
-    padding: 0.4rem;
-    border-radius: 8px;
     border: 1px solid #1E2533;
+    border-radius: 8px;
+    padding: 0.5rem;
+    margin-bottom: 0.85rem;
 }
 
-.stTabs [data-baseweb="tab"] {
+div[role="radiogroup"] > label {
+    background-color: #191F2E;
+    border: 1px solid #263042;
     border-radius: 6px;
-    padding: 0.45rem 0.85rem;
-    color: #94A3B8;
-    font-weight: 500;
-    font-size: 0.82rem;
-    letter-spacing: 0.01em;
+    padding: 0.42rem 0.8rem !important;
+    margin: 0 !important;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
-.stTabs [aria-selected="true"] {
+div[role="radiogroup"] > label:hover {
+    border-color: #3B82F6;
+}
+
+div[role="radiogroup"] > label[data-checked="true"],
+div[role="radiogroup"] > label:has(input:checked) {
     background-color: #1E293B !important;
-    color: #F8FAFC !important;
-    border: 1px solid #3B82F6 !important;
+    border-color: #3B82F6 !important;
+    box-shadow: 0 0 0 1px #3B82F6;
+}
+
+div[role="radiogroup"] > label > div:first-child {
+    display: none !important;
+}
+
+div[role="radiogroup"] p {
+    font-size: 0.8rem !important;
     font-weight: 600 !important;
+    color: #E2E8F0 !important;
+    margin: 0 !important;
+}
+
+/* Chart Header Box */
+.chart-header {
+    background-color: #131722;
+    border: 1px solid #1E2533;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 0.65rem 0.95rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #F8FAFC;
 }
 
 /* Editorial News Feed Rows */
@@ -187,11 +220,6 @@ html, body, [class*="css"] {
     border-radius: 7px;
     padding: 0.8rem 1rem;
     margin-bottom: 0.55rem;
-    transition: border-color 0.15s ease;
-}
-
-.amc-news-row:hover {
-    border-color: #334155;
 }
 
 .amc-news-row a {
@@ -263,13 +291,13 @@ with top_left:
                 <div style="font-family:'IBM Plex Mono',monospace; font-size:0.74rem; color:#F87171; letter-spacing:0.06em; margin-bottom:0.3rem;">
                     PORTFOLIO REGIME DIAGNOSTIC // ELEVATED TAIL-RISK
                 </div>
-                <div style="font-size:1.12rem; font-weight:600; color:#F8FAFC; margin-bottom:0.65rem;">
+                <div style="font-size:1.1rem; font-weight:600; color:#F8FAFC; margin-bottom:0.6rem;">
                     Defensive Volatility &amp; Drawdown Shield Active
                 </div>
-                <div style="font-size:0.88rem; color:#CBD5E1; line-height:1.6;">
-                    • <strong>Quantitative Tail-Risk Probability:</strong> <span style="font-family:'IBM Plex Mono',monospace; color:#F8FAFC;">{brief['tail_risk_prob']}%</span> (Threshold: {brief['alert_thresh_pct']}%)<br>
-                    • <strong>Multimodal Risk Score (Quant + NLP News):</strong> <span style="font-family:'IBM Plex Mono',monospace; color:#F8FAFC;">{default_alloc['multimodal_risk_pct']}%</span> (News Fear Index: {sent_res['news_fear_index']}/100)<br>
-                    • <strong>Target Capital Posture:</strong> Maintain <span style="font-family:'IBM Plex Mono',monospace; color:#60A5FA;">{default_alloc['recommended_equity_pct']}%</span> Equity / <span style="font-family:'IBM Plex Mono',monospace; color:#10B981;">{default_alloc['safe_cash_pct']}%</span> Liquid Reserve
+                <div style="font-size:0.87rem; color:#CBD5E1; line-height:1.6;">
+                    • <strong>Quantitative Tail-Risk Probability:</strong> <span style="font-family:'IBM Plex Mono',monospace; color:#F8FAFC;">{brief['tail_risk_prob']}%</span> (Cutoff: {brief['alert_thresh_pct']}%)<br>
+                    • <strong>Multimodal Risk Score (Quant + NLP):</strong> <span style="font-family:'IBM Plex Mono',monospace; color:#F8FAFC;">{default_alloc['multimodal_risk_pct']}%</span> (News Fear: {sent_res['news_fear_index']}/100)<br>
+                    • <strong>Target Capital Posture:</strong> <span style="font-family:'IBM Plex Mono',monospace; color:#60A5FA;">{default_alloc['recommended_equity_pct']}%</span> Equity / <span style="font-family:'IBM Plex Mono',monospace; color:#10B981;">{default_alloc['safe_cash_pct']}%</span> Liquid Cash
                 </div>
             </div>
             """,
@@ -282,13 +310,13 @@ with top_left:
                 <div style="font-family:'IBM Plex Mono',monospace; font-size:0.74rem; color:#34D399; letter-spacing:0.06em; margin-bottom:0.3rem;">
                     PORTFOLIO REGIME DIAGNOSTIC // NORMAL VOLATILITY ENVELOPE
                 </div>
-                <div style="font-size:1.12rem; font-weight:600; color:#F8FAFC; margin-bottom:0.65rem;">
+                <div style="font-size:1.1rem; font-weight:600; color:#F8FAFC; margin-bottom:0.6rem;">
                     Standard Institutional Risk-Budget Deployment
                 </div>
-                <div style="font-size:0.88rem; color:#CBD5E1; line-height:1.6;">
-                    • <strong>Quantitative Tail-Risk Probability:</strong> <span style="font-family:'IBM Plex Mono',monospace; color:#F8FAFC;">{brief['tail_risk_prob']}%</span> (Threshold: {brief['alert_thresh_pct']}%)<br>
-                    • <strong>Multimodal Risk Score (Quant + NLP News):</strong> <span style="font-family:'IBM Plex Mono',monospace; color:#F8FAFC;">{default_alloc['multimodal_risk_pct']}%</span> (News Fear Index: {sent_res['news_fear_index']}/100)<br>
-                    • <strong>Target Capital Posture:</strong> Deploy <span style="font-family:'IBM Plex Mono',monospace; color:#60A5FA;">{default_alloc['recommended_equity_pct']}%</span> Equity / <span style="font-family:'IBM Plex Mono',monospace; color:#10B981;">{default_alloc['safe_cash_pct']}%</span> Liquid Reserve
+                <div style="font-size:0.87rem; color:#CBD5E1; line-height:1.6;">
+                    • <strong>Quantitative Tail-Risk Probability:</strong> <span style="font-family:'IBM Plex Mono',monospace; color:#F8FAFC;">{brief['tail_risk_prob']}%</span> (Cutoff: {brief['alert_thresh_pct']}%)<br>
+                    • <strong>Multimodal Risk Score (Quant + NLP):</strong> <span style="font-family:'IBM Plex Mono',monospace; color:#F8FAFC;">{default_alloc['multimodal_risk_pct']}%</span> (News Fear: {sent_res['news_fear_index']}/100)<br>
+                    • <strong>Target Capital Posture:</strong> <span style="font-family:'IBM Plex Mono',monospace; color:#60A5FA;">{default_alloc['recommended_equity_pct']}%</span> Equity / <span style="font-family:'IBM Plex Mono',monospace; color:#10B981;">{default_alloc['safe_cash_pct']}%</span> Liquid Cash
                 </div>
             </div>
             """,
@@ -306,50 +334,55 @@ with top_right:
     )])
     fig_donut.update_layout(
         height=175,
-        margin=dict(l=15, r=15, t=28, b=10),
+        margin=dict(l=15, r=15, t=32, b=10),
         paper_bgcolor="#131722",
         showlegend=True,
         legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=0.62, font=dict(size=11, color="#CBD5E1")),
         title=dict(text="Recommended Capital Posture", font=dict(size=12, color="#94A3B8"), x=0.04, y=0.94),
         annotations=[dict(
             text=f"<b>{default_alloc['recommended_equity_pct']}%</b><br><span style='font-size:10px;color:#94A3B8'>EQUITY</span>",
-            x=0.28, y=0.5, font=dict(size=16, color="#F8FAFC", family="IBM Plex Mono"), showarrow=False
+            x=0.28, y=0.5, font=dict(size=15, color="#F8FAFC", family="IBM Plex Mono"), showarrow=False
         )],
     )
-    st.plotly_chart(fig_donut, use_container_width=True)
+    st.plotly_chart(fig_donut, use_container_width=True, config={"displayModeBar": False})
 
 st.write("")
 
 # Unified 8-Cell Swiss Precision KPI Matrix (4 x 2 Grid)
 r1_c1, r1_c2, r1_c3, r1_c4 = st.columns(4)
-r1_c1.metric("India VIX Level", f"{brief['latest_vix']}", f"Causal Cutoff: {causal['vix_threshold']}")
-r1_c2.metric("GARCH(1,1)-t Volatility", f"{brief['latest_garch_vol']}%", f"Persistence: {garch_s['persistence']}")
-r1_c3.metric("Next-Day |Nifty| Forecast", f"{brief['pred_abs_ret']}%", f"OOS RMSE: {metrics['oos_rmse']}%")
-r1_c4.metric("95% ACI Risk Bound", f"[0%, {brief['aci_upper_95']}%]", f"OOS Coverage: {metrics['aci_cov_95']}%")
+r1_c1.metric("India VIX Level", f"{brief['latest_vix']}", f"Cutoff: {causal['vix_threshold']}")
+r1_c2.metric("GARCH(1,1)-t Vol", f"{brief['latest_garch_vol']}%", f"Persist: {garch_s['persistence']}")
+r1_c3.metric("Next-Day |Nifty|", f"{brief['pred_abs_ret']}%", f"RMSE: {metrics['oos_rmse']}%")
+r1_c4.metric("95% ACI Bound", f"0% – {brief['aci_upper_95']}%", f"Cov: {metrics['aci_cov_95']}%")
 
 st.write("")
 r2_c1, r2_c2, r2_c3, r2_c4 = st.columns(4)
-r2_c1.metric("Quant Tail-Risk Prob", f"{brief['tail_risk_prob']}%", f"OOS ROC-AUC: {metrics['oos_auc']}")
-r2_c2.metric("Multimodal Risk (Quant+NLP)", f"{default_alloc['multimodal_risk_pct']}%", f"News Fear: {sent_res['news_fear_index']}/100")
-r2_c3.metric("Suggested Equity Exposure", f"{default_alloc['recommended_equity_pct']}%", f"Safe Cash: {default_alloc['safe_cash_pct']}%")
-r2_c4.metric("95% ACI 1-Day Max Loss", f"₹{default_alloc['hedged_aci_loss_inr']:,.0f}", f"Saves ₹{default_alloc['capital_saved_inr']:,.0f}")
+r2_c1.metric("Tail-Risk Prob", f"{brief['tail_risk_prob']}%", f"AUC: {metrics['oos_auc']}")
+r2_c2.metric("Multimodal Risk", f"{default_alloc['multimodal_risk_pct']}%", f"Fear: {sent_res['news_fear_index']}/100")
+r2_c3.metric("Equity Exposure", f"{default_alloc['recommended_equity_pct']}%", f"Cash: {default_alloc['safe_cash_pct']}%")
+r2_c4.metric("95% Max 1D Loss", f"₹{default_alloc['hedged_aci_loss_inr']:,.0f}", f"Saves ₹{default_alloc['capital_saved_inr']:,.0f}")
 
 st.write("")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+# All 7 Modules Visible & Wrapped Cleanly Across Mobile, Tablet, and Desktop
+MODULES = [
     "01. Conformal Volatility",
     "02. Causal Econometrics",
     "03. Contagion Network",
     "04. NLP News Telemetry",
     "05. CVaR Position Sizing",
     "06. Macro Stress Lab",
-    "07. Alert Automation"
-])
+    "07. Alert Automation",
+]
+active_module = st.radio("Workstation Module", MODULES, horizontal=True, label_visibility="collapsed")
 
-# --- TAB 01: INTERACTIVE PLOTLY ACI VOLATILITY & ROC ---
-with tab1:
-    col_a, col_b = st.columns([2, 1])
+plotly_clean_cfg = {"displayModeBar": "hover", "displaylogo": False}
+
+# --- MODULE 01: INTERACTIVE PLOTLY ACI VOLATILITY & ROC (ZERO OVERLAP) ---
+if active_module == "01. Conformal Volatility":
+    col_a, col_b = st.columns([1.85, 1])
     with col_a:
+        st.markdown('<div class="chart-header">Out-of-Sample Volatility &amp; 95% Adaptive Conformal Band</div>', unsafe_allow_html=True)
         fig1 = go.Figure()
         fig1.add_trace(go.Scatter(
             x=ml_res["dates_test"], y=ml_res["aci_upper_95"],
@@ -358,8 +391,8 @@ with tab1:
         fig1.add_trace(go.Scatter(
             x=ml_res["dates_test"], y=ml_res["aci_lower_95"],
             mode="lines", line=dict(width=0),
-            fill="tonexty", fillcolor="rgba(59, 130, 246, 0.16)",
-            name=f"95% Adaptive Conformal Interval (Cov: {metrics['aci_cov_95']}%)",
+            fill="tonexty", fillcolor="rgba(59, 130, 246, 0.18)",
+            name=f"95% ACI Band (Cov: {metrics['aci_cov_95']}%)",
         ))
         fig1.add_trace(go.Scatter(
             x=ml_res["dates_test"], y=ml_res["y_reg_test"],
@@ -372,28 +405,35 @@ with tab1:
             name="Point Forecast (%)",
         ))
         fig1.update_layout(
-            title=dict(text="Out-of-Sample Volatility & 95% Adaptive Conformal Band", font=dict(size=14, color="#F8FAFC")),
             yaxis_title="Daily Absolute Return (%)",
             hovermode="x unified",
-            height=420,
+            height=410,
             paper_bgcolor="#131722",
             plot_bgcolor="#0E121B",
-            font=dict(color="#94A3B8", family="Inter"),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11)),
+            font=dict(color="#94A3B8", family="Inter", size=11),
+            legend=dict(
+                orientation="h",
+                yanchor="top",
+                y=-0.18,
+                xanchor="left",
+                x=0,
+                font=dict(size=11, color="#CBD5E1"),
+            ),
             xaxis=dict(gridcolor="#1E2533", showline=True, linecolor="#1E2533"),
             yaxis=dict(gridcolor="#1E2533", showline=True, linecolor="#1E2533"),
-            margin=dict(l=45, r=20, t=55, b=40),
+            margin=dict(l=48, r=18, t=20, b=75),
         )
-        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(fig1, use_container_width=True, config=plotly_clean_cfg)
 
     with col_b:
+        st.markdown('<div class="chart-header">Out-of-Sample Tail-Risk ROC Curve</div>', unsafe_allow_html=True)
         fpr, tpr, _ = roc_curve(ml_res["y_clf_test"], ml_res["test_clf_probs"])
         fig2 = go.Figure()
         fig2.add_trace(go.Scatter(
             x=fpr, y=tpr, mode="lines",
             line=dict(color="#10B981", width=2.2),
-            fill="tozeroy", fillcolor="rgba(16, 185, 129, 0.10)",
-            name=f"Tail-Risk Classifier (AUC = {metrics['oos_auc']})"
+            fill="tozeroy", fillcolor="rgba(16, 185, 129, 0.12)",
+            name=f"Tail-Risk RF (AUC = {metrics['oos_auc']})"
         ))
         fig2.add_trace(go.Scatter(
             x=[0, 1], y=[0, 1], mode="lines",
@@ -401,27 +441,33 @@ with tab1:
             name="Random Baseline"
         ))
         fig2.update_layout(
-            title=dict(text="Out-of-Sample Tail-Risk ROC", font=dict(size=14, color="#F8FAFC")),
             xaxis_title="False Positive Rate",
             yaxis_title="True Positive Rate",
-            height=420,
+            height=410,
             paper_bgcolor="#131722",
             plot_bgcolor="#0E121B",
-            font=dict(color="#94A3B8", family="Inter"),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11)),
-            xaxis=dict(gridcolor="#1E2533"),
-            yaxis=dict(gridcolor="#1E2533"),
-            margin=dict(l=45, r=20, t=55, b=40),
+            font=dict(color="#94A3B8", family="Inter", size=11),
+            legend=dict(
+                orientation="h",
+                yanchor="top",
+                y=-0.18,
+                xanchor="left",
+                x=0,
+                font=dict(size=11, color="#CBD5E1"),
+            ),
+            xaxis=dict(gridcolor="#1E2533", range=[0, 1]),
+            yaxis=dict(gridcolor="#1E2533", range=[0, 1.03]),
+            margin=dict(l=48, r=18, t=20, b=75),
         )
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, use_container_width=True, config=plotly_clean_cfg)
 
     st.info(
         f"**Non-Stationarity Recovery Audit:** Static Split Conformal coverage degraded to **{metrics['static_cov_95']}%** "
         f"under regime shifts, whereas online **Adaptive Conformal Inference (ACI)** restored empirical coverage to **{metrics['aci_cov_95']}%**."
     )
 
-# --- TAB 02: ECONOMETRICS & CAUSAL ATE ---
-with tab2:
+# --- MODULE 02: ECONOMETRICS & CAUSAL ATE ---
+elif active_module == "02. Causal Econometrics":
     st.markdown("#### Orthogonalized Double ML Causal Regime Impact")
     st.write(
         f"Controlling for crude oil, USD/INR, US 10Y yields, realized volatility, and banking beta, "
@@ -439,10 +485,11 @@ with tab2:
         st.markdown("**Granger Causality Lead-Lag Tests**")
         st.dataframe(econ_res["granger_df"], use_container_width=True)
 
-# --- TAB 03: INTERACTIVE CONTAGION NETWORK ---
-with tab3:
+# --- MODULE 03: INTERACTIVE CONTAGION NETWORK ---
+elif active_module == "03. Contagion Network":
     col_g1, col_g2 = st.columns([1.45, 1])
     with col_g1:
+        st.markdown('<div class="chart-header">Gaussian Precision Contagion Network (Blue = Positive | Red = Inverse)</div>', unsafe_allow_html=True)
         G = econ_res["graph"]
         strength = econ_res["node_strength"]
         pos = nx.circular_layout(G)
@@ -452,7 +499,7 @@ with tab3:
             x0, y0 = pos[u]
             x1, y1 = pos[v]
             w = d["weight"]
-            edge_color = "rgba(239, 68, 68, 0.75)" if w < 0 else "rgba(59, 130, 246, 0.75)"
+            edge_color = "rgba(239, 68, 68, 0.78)" if w < 0 else "rgba(59, 130, 246, 0.78)"
             edge_traces.append(go.Scatter(
                 x=[x0, x1, None], y=[y0, y1, None],
                 mode="lines",
@@ -488,15 +535,14 @@ with tab3:
 
         fig3 = go.Figure(data=edge_traces + [node_trace])
         fig3.update_layout(
-            title=dict(text="Gaussian Precision Contagion Network (Blue = Positive | Red = Inverse Spillover)", font=dict(size=13, color="#F8FAFC")),
-            height=440,
+            height=430,
             paper_bgcolor="#131722",
             plot_bgcolor="#131722",
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-1.35, 1.35]),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-1.35, 1.35]),
-            margin=dict(l=20, r=20, t=50, b=20),
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-1.38, 1.38]),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-1.38, 1.38]),
+            margin=dict(l=20, r=20, t=20, b=20),
         )
-        st.plotly_chart(fig3, use_container_width=True)
+        st.plotly_chart(fig3, use_container_width=True, config=plotly_clean_cfg)
 
     with col_g2:
         st.markdown("**Systemic Hub Contagion Strength**")
@@ -517,8 +563,8 @@ with tab3:
             },
         )
 
-# --- TAB 04: NLP NEWS TELEMETRY ---
-with tab4:
+# --- MODULE 04: NLP NEWS TELEMETRY ---
+elif active_module == "04. NLP News Telemetry":
     st.markdown("#### Real-Time Indian Equity Headlines & NLP Sentiment Index")
     s1, s2, s3 = st.columns(3)
     s1.metric("News Fear Index (0-100)", f"{sent_res['news_fear_index']}", "50 = Neutral | >50 = Bearish Fear")
@@ -544,8 +590,8 @@ with tab4:
     else:
         st.warning("Live RSS news feed temporarily unavailable; econometric models remain active.")
 
-# --- TAB 05: CVaR POSITION SIZING ---
-with tab5:
+# --- MODULE 05: CVaR POSITION SIZING ---
+elif active_module == "05. CVaR Position Sizing":
     st.markdown("#### Dynamic Position Sizing & 95% ACI Tail-Loss (CVaR) Calculator")
     st.write("Calibrate portfolio capital and daily volatility budget to compute tail-risk-adjusted equity exposure.")
     p_col1, p_col2 = st.columns(2)
@@ -565,8 +611,8 @@ with tab5:
         f"(compared to **₹{alloc['unhedged_aci_loss_inr']:,.0f}** if 100% invested)."
     )
 
-# --- TAB 06: MACRO STRESS LAB ---
-with tab6:
+# --- MODULE 06: MACRO STRESS LAB ---
+elif active_module == "06. Macro Stress Lab":
     st.markdown("#### Interactive What-If Macro & Volatility Stress Simulator")
     st.write("Simulate sudden macro shocks to inspect how our Causal Double-ML & Conformal models re-price next-day market risk.")
     w1, w2, w3 = st.columns(3)
@@ -585,8 +631,8 @@ with tab6:
         f"Causal VIX Cutoff: {causal['vix_threshold']}"
     )
 
-# --- TAB 07: ALERT AUTOMATION ---
-with tab7:
+# --- MODULE 07: ALERT AUTOMATION ---
+elif active_module == "07. Alert Automation":
     st.markdown("#### Autonomous Pre-Market Telegram Risk Alert Bot")
     st.write(
         "Receive automated daily risk briefs at **9:00 AM IST** (15 mins before NSE market open), "
