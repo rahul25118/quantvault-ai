@@ -481,12 +481,12 @@ def send_telegram_risk_alert(bot_token: str, chat_id: str, live_brief: dict, all
         return False, "Missing Telegram Bot Token or Chat ID."
     msg = (
         f"🚨 *QuantVault AI — Daily Risk Brief ({live_brief['as_of_date']})*\n"
-        f"• *India VIX:* {live_brief['latest_vix']}\n"
-        f"• *GARCH(1,1)-t Vol:* {live_brief['latest_garch_vol']}%\n"
-        f"• *Quant Tail-Risk Prob:* {live_brief['tail_risk_prob']}%\n"
-        f"• *Multimodal Risk Score:* {alloc['multimodal_risk_pct']}%\n"
-        f"• *95% ACI Bound:* [0%, {live_brief['aci_upper_95']}%]\n"
-        f"• *Suggested Equity Exposure:* {alloc['recommended_equity_pct']}% (Safe Cash/Hedge: {alloc['safe_cash_pct']}%)"
+        f"| *India VIX:* {live_brief['latest_vix']}\n"
+        f"| *GARCH(1,1)-t Vol:* {live_brief['latest_garch_vol']}%\n"
+        f"| *Quant Tail-Risk Prob:* {live_brief['tail_risk_prob']}%\n"
+        f"| *Multimodal Risk Score:* {alloc['multimodal_risk_pct']}%\n"
+        f"| *95% ACI Bound:* [0%, {live_brief['aci_upper_95']}%]\n"
+        f"| *Suggested Equity Exposure:* {alloc['recommended_equity_pct']}% (Safe Cash/Hedge: {alloc['safe_cash_pct']}%)"
     )
     url = f"https://api.telegram.org/bot{bot_token.strip()}/sendMessage"
     try:
@@ -723,7 +723,7 @@ def generate_institutional_pdf_tearsheet(
     pdf.set_text_color(203, 213, 225)
     pdf.set_font("Helvetica", "", 9.5)
     pdf.set_x(12)
-    pdf.cell(0, 6, f"Market Close: {brief['as_of_date']}  |  GARCH(1,1)-t • Double ML Causal • Adaptive Conformal Inference", ln=True)
+    pdf.cell(0, 6, f"Market Close: {brief['as_of_date']}  |  GARCH(1,1)-t | Double ML Causal | Adaptive Conformal Inference", ln=True)
 
     pdf.ln(10)
     pdf.set_text_color(15, 23, 42)
