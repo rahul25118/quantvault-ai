@@ -66,20 +66,26 @@ def fetch_live_market_data(period: str = "5y") -> pd.DataFrame:
     return df
 
 def fetch_live_macro_news(limit: int = 8) -> list:
-    """Fetches real-time Indian market & RBI macro headlines via Google News RSS (No API Key)."""
-    url = "https://news.google.com/rss/search?q=Nifty+OR+RBI+inflation+OR+Indian+economy+market&hl=en-IN&gl=IN&ceid=IN:en"
+    """Fetches strictly recent (last 7 days) Indian market & RBI headlines sorted newest-first."""
+    from email.utils import parsedate_to_datetime
+    url = "https://news.google.com/rss/search?q=(Nifty+OR+RBI+OR+Sensex+OR+Indian+economy)+when:7d&hl=en-IN&gl=IN&ceid=IN:en"
     headlines = []
     try:
         r = requests.get(url, timeout=8)
         root = ET.fromstring(r.content)
-        for item in root.findall(".//item")[:limit]:
+        for item in root.findall(".//item"):
             title = item.find("title").text if item.find("title") is not None else ""
             link = item.find("link").text if item.find("link") is not None else ""
             pub_date = item.find("pubDate").text if item.find("pubDate") is not None else ""
-            headlines.append({"title": title, "link": link, "published": pub_date})
+            try:
+                dt = parsedate_to_datetime(pub_date)
+            except Exception:
+                dt = pd.Timestamp.min.tz_localize("UTC")
+            headlines.append({"title": title, "link": link, "published": pub_date, "dt": dt})
+        headlines.sort(key=lambda x: x["dt"], reverse=True)
     except Exception:
         pass
-    return headlines
+    return headlines[:limit]
 
 def engineer_quant_features(df_clean: pd.DataFrame):
     """Builds strictly causal quantitative features, targets, and GARCH(1,1)-t volatility."""
