@@ -66,22 +66,25 @@ def fetch_live_market_data(period: str = "5y") -> pd.DataFrame:
     return df
 
 def fetch_live_macro_news(limit: int = 8) -> list:
-    """Fetches strictly recent (last 7 days) Indian market & RBI headlines sorted newest-first."""
+    """Fetches strictly fresh (last 48 hours) live Indian equity & macro news, excluding archival bulletins."""
     from email.utils import parsedate_to_datetime
-    url = "https://news.google.com/rss/search?q=(Nifty+OR+RBI+OR+Sensex+OR+Indian+economy)+when:7d&hl=en-IN&gl=IN&ceid=IN:en"
+    url = "https://news.google.com/rss/search?q=(Nifty+50+OR+Sensex+OR+RBI+OR+Indian+stock+market)+when:2d&hl=en-IN&gl=IN&ceid=IN:en"
     headlines = []
     try:
         r = requests.get(url, timeout=8)
         root = ET.fromstring(r.content)
+        now_utc = pd.Timestamp.now(tz="UTC")
         for item in root.findall(".//item"):
             title = item.find("title").text if item.find("title") is not None else ""
             link = item.find("link").text if item.find("link") is not None else ""
             pub_date = item.find("pubDate").text if item.find("pubDate") is not None else ""
             try:
-                dt = parsedate_to_datetime(pub_date)
+                dt = pd.Timestamp(parsedate_to_datetime(pub_date)).tz_convert("UTC")
             except Exception:
-                dt = pd.Timestamp.min.tz_localize("UTC")
-            headlines.append({"title": title, "link": link, "published": pub_date, "dt": dt})
+                continue
+            # Strictly keep only articles published within the last 72 hours
+            if (now_utc - dt).total_seconds() <= 72 * 3600:
+                headlines.append({"title": title, "link": link, "published": pub_date, "dt": dt})
         headlines.sort(key=lambda x: x["dt"], reverse=True)
     except Exception:
         pass
