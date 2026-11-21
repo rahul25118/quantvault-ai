@@ -20,7 +20,6 @@ st.markdown(
     "Gaussian Precision Contagion Network, and **Adaptive Conformal Inference (ACI)**."
 )
 
-# Sidebar Controls
 st.sidebar.header("Engine Parameters")
 lookback_period = st.sidebar.selectbox("Historical Calibration Window", ["5y", "3y", "2y"], index=0)
 aci_gamma = st.sidebar.slider("ACI Online Learning Rate (gamma)", 0.01, 0.15, 0.05, 0.01)
@@ -44,7 +43,6 @@ metrics = ml_res["metrics"]
 causal = econ_res["causal_ate"]
 garch_s = econ_res["garch_summary"]
 
-# Top KPI Cards: Live Risk Brief
 st.subheader(f"Live Autonomous Risk Brief (Market Close: {brief['as_of_date']})")
 is_elevated = (brief["tail_risk_prob"] >= brief["alert_thresh_pct"]) or (brief["latest_vix"] > causal["vix_threshold"])
 
@@ -68,7 +66,6 @@ c5.metric("Tail-Risk Shock Prob", f"{brief['tail_risk_prob']}%", f"OOS AUC: {met
 
 st.divider()
 
-# Tabs for Deep Quantitative Diagnostics
 tab1, tab2, tab3, tab4 = st.tabs([
     "1. Adaptive Conformal Volatility",
     "2. Econometrics & Causal ATE",
@@ -154,7 +151,7 @@ with tab4:
     st.markdown("### Real-Time Indian Market & RBI Macro Headlines")
     if news_items:
         for item in news_items:
-            st.markdown(f"- **[{item['title']}]({item['link']})**  
-  *Published: {item['published']}*")
+            st.markdown(f"- **[{item['title']}]({item['link']})**")
+            st.caption(f"Published: {item['published']}")
     else:
         st.warning("Live RSS news feed temporarily unavailable; econometric models remain active.")
