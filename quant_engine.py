@@ -349,3 +349,150 @@ def train_and_evaluate_conformal_engine(feat_df: pd.DataFrame, model_df: pd.Data
             "alert_thresh_pct": round(opt_thresh * 100, 2),
         }
     }
+
+
+# ==============================================================================
+# ADVANCED ADD-ONS: MULTIMODAL NEWS SENTIMENT, PORTFOLIO SIZING & STRESS ENGINE
+# ==============================================================================
+
+def score_news_sentiment(news_items: list) -> dict:
+    # Computes domain-specific financial lexicon sentiment and News Fear Index across live headlines
+    bearish_words = {
+        "fall", "falls", "fell", "drop", "drops", "slump", "crash", "plunge", "selloff",
+        "sell-off", "fear", "risk", "inflation", "hike", "outflow", "outflows", "weak",
+        "loss", "losses", "decline", "declines", "tumble", "volatile", "volatility",
+        "war", "tariff", "deficit", "downgrade", "bear", "bearish", "warning", "pressure"
+    }
+    bullish_words = {
+        "surge", "surges", "jump", "jumps", "rally", "rallies", "gain", "gains", "high",
+        "record", "inflow", "inflows", "growth", "bull", "bullish", "reclaim", "reclaims",
+        "boost", "strong", "recovery", "upgrade", "profit", "profits", "soar", "soars", "up"
+    }
+
+    enriched = []
+    scores = []
+    for item in news_items:
+        title_lower = item["title"].lower()
+        tokens = [w.strip(".,:;!?()[]'\"") for w in title_lower.split()]
+        b_hits = sum(1 for t in tokens if t in bearish_words)
+        g_hits = sum(1 for t in tokens if t in bullish_words)
+        raw_score = g_hits - b_hits
+        if raw_score > 0:
+            label = "Bullish"
+        elif raw_score < 0:
+            label = "Bearish"
+        else:
+            label = "Neutral"
+        norm_score = float(np.clip(raw_score / 3.0, -1.0, 1.0))
+        scores.append(norm_score)
+        enriched.append({**item, "sentiment": label, "score": round(norm_score, 2)})
+
+    avg_sent = float(np.mean(scores)) if scores else 0.0
+    news_fear_index = round(float(np.clip(50.0 - (avg_sent * 40.0), 0.0, 100.0)), 2)
+    bearish_count = sum(1 for x in enriched if x["sentiment"] == "Bearish")
+    bullish_count = sum(1 for x in enriched if x["sentiment"] == "Bullish")
+
+    return {
+        "enriched_news": enriched,
+        "avg_sentiment": round(avg_sent, 3),
+        "news_fear_index": news_fear_index,
+        "bearish_count": bearish_count,
+        "bullish_count": bullish_count,
+        "total_count": len(enriched),
+    }
+
+
+def compute_portfolio_risk_allocation(
+    capital_inr: float,
+    target_daily_vol_pct: float,
+    live_brief: dict,
+    news_fear_index: float,
+) -> dict:
+    # Computes Volatility-Targeted + Tail-Risk Adjusted Position Sizing and 95% ACI Expected Loss
+    base_prob = float(live_brief["tail_risk_prob"])
+    multimodal_risk_pct = round(0.80 * base_prob + 0.20 * news_fear_index, 2)
+
+    garch_vol = max(float(live_brief["latest_garch_vol"]), 0.25)
+    aci_upper = max(float(live_brief["aci_upper_95"]), 0.50)
+
+    vol_scalar = min(target_daily_vol_pct / garch_vol, 1.0)
+    risk_haircut = max(0.15, 1.0 - (multimodal_risk_pct / 100.0) * 0.85)
+    recommended_equity_pct = round(float(np.clip(vol_scalar * risk_haircut * 100.0, 10.0, 100.0)), 1)
+    safe_cash_pct = round(100.0 - recommended_equity_pct, 1)
+
+    equity_inr = round(capital_inr * (recommended_equity_pct / 100.0), 0)
+    cash_inr = round(capital_inr - equity_inr, 0)
+
+    unhedged_aci_loss_inr = round(capital_inr * (aci_upper / 100.0), 0)
+    hedged_aci_loss_inr = round(equity_inr * (aci_upper / 100.0), 0)
+    capital_saved_inr = round(unhedged_aci_loss_inr - hedged_aci_loss_inr, 0)
+
+    return {
+        "multimodal_risk_pct": multimodal_risk_pct,
+        "recommended_equity_pct": recommended_equity_pct,
+        "safe_cash_pct": safe_cash_pct,
+        "equity_inr": equity_inr,
+        "cash_inr": cash_inr,
+        "unhedged_aci_loss_inr": unhedged_aci_loss_inr,
+        "hedged_aci_loss_inr": hedged_aci_loss_inr,
+        "capital_saved_inr": capital_saved_inr,
+    }
+
+
+def simulate_what_if_stress(
+    sim_vix: float,
+    crude_shock_pct: float,
+    usdinr_shock_pct: float,
+    live_brief: dict,
+    causal_ate: dict,
+) -> dict:
+    # Simulates next-day tail-risk probability & ACI bound under user-defined macro shock scenarios
+    base_prob = float(live_brief["tail_risk_prob"])
+    base_vix = float(live_brief["latest_vix"])
+    base_aci = float(live_brief["aci_upper_95"])
+    vix_thresh = float(causal_ate["vix_threshold"])
+    ate_effect = float(causal_ate["ate_pct"])
+
+    regime_jump = 0.0
+    if base_vix <= vix_thresh < sim_vix:
+        regime_jump = ate_effect
+    elif sim_vix <= vix_thresh < base_vix:
+        regime_jump = -ate_effect
+
+    vix_delta_effect = (sim_vix - base_vix) * 1.45
+    crude_effect = abs(crude_shock_pct) * 0.95
+    fx_effect = max(0.0, usdinr_shock_pct) * 2.80
+
+    stressed_prob = round(float(np.clip(base_prob + regime_jump + vix_delta_effect + crude_effect + fx_effect, 1.0, 99.5)), 2)
+    vol_multiplier = max(0.65, (sim_vix / max(base_vix, 1.0)) * (1.0 + abs(crude_shock_pct) * 0.015 + max(0.0, usdinr_shock_pct) * 0.03))
+    stressed_aci_upper = round(base_aci * vol_multiplier, 2)
+
+    return {
+        "stressed_prob": stressed_prob,
+        "prob_delta": round(stressed_prob - base_prob, 2),
+        "stressed_aci_upper": stressed_aci_upper,
+        "aci_delta": round(stressed_aci_upper - base_aci, 2),
+    }
+
+
+def send_telegram_risk_alert(bot_token: str, chat_id: str, live_brief: dict, alloc: dict) -> tuple:
+    # Sends an automated formatted risk brief to Telegram via Bot API
+    if not bot_token or not chat_id:
+        return False, "Missing Telegram Bot Token or Chat ID."
+    msg = (
+        f"🚨 *QuantVault AI — Daily Risk Brief ({live_brief['as_of_date']})*\n"
+        f"• *India VIX:* {live_brief['latest_vix']}\n"
+        f"• *GARCH(1,1)-t Vol:* {live_brief['latest_garch_vol']}%\n"
+        f"• *Quant Tail-Risk Prob:* {live_brief['tail_risk_prob']}%\n"
+        f"• *Multimodal Risk Score:* {alloc['multimodal_risk_pct']}%\n"
+        f"• *95% ACI Bound:* [0%, {live_brief['aci_upper_95']}%]\n"
+        f"• *Suggested Equity Exposure:* {alloc['recommended_equity_pct']}% (Safe Cash/Hedge: {alloc['safe_cash_pct']}%)"
+    )
+    url = f"https://api.telegram.org/bot{bot_token.strip()}/sendMessage"
+    try:
+        r = requests.post(url, json={"chat_id": chat_id.strip(), "text": msg, "parse_mode": "Markdown"}, timeout=10)
+        if r.status_code == 200:
+            return True, "Alert delivered successfully to Telegram!"
+        return False, f"Telegram API Error ({r.status_code}): {r.text}"
+    except Exception as e:
+        return False, f"Network Error: {e}"

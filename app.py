@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -5,49 +6,30 @@ import pandas as pd
 import streamlit as st
 from sklearn.metrics import roc_curve
 from quant_engine import (
+    compute_portfolio_risk_allocation,
     engineer_quant_features,
     fetch_live_macro_news,
     fetch_live_market_data,
     run_econometric_and_causal_suite,
+    score_news_sentiment,
+    send_telegram_risk_alert,
+    simulate_what_if_stress,
     train_and_evaluate_conformal_engine,
 )
 
-# Start with sidebar collapsed so the dashboard takes 100% full screen width, with a '>' toggle button at top-left
 st.set_page_config(
-    page_title="QuantVault AI | Autonomous Risk Engine",
+    page_title="QuantVault AI | Institutional Risk Engine",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS to use full screen width cleanly and prevent metric text truncation
-st.markdown(
-    """
-    <style>
-    .block-container {
-        padding-top: 1.5rem;
-        padding-bottom: 1.5rem;
-        padding-left: 1.5rem;
-        padding-right: 1.5rem;
-        max-width: 100%;
-    }
-    [data-testid="stMetricValue"] {
-        font-size: 1.65rem !important;
-        white-space: normal !important;
-        overflow-wrap: break-word !important;
-    }
-    [data-testid="stMetricLabel"] {
-        font-size: 0.9rem !important;
-        white-space: normal !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+css_style = "<style>.block-container { padding: 1.4rem; max-width: 100%; } [data-testid='stMetricValue'] { font-size: 1.6rem !important; white-space: normal !important; } [data-testid='stMetricLabel'] { font-size: 0.88rem !important; white-space: normal !important; }</style>"
+st.markdown(css_style, unsafe_allow_html=True)
 
-st.title("QuantVault AI — Autonomous Risk Intelligence")
+st.title("QuantVault AI — Autonomous Risk & Decision Intelligence")
 st.markdown(
     "Live multi-asset econometrics (`GARCH(1,1)-t`), Orthogonalized Double ML Causal Inference, "
-    "Gaussian Precision Contagion Network, and **Adaptive Conformal Inference (ACI)**."
+    "Gaussian Precision Contagion Network, **Adaptive Conformal Inference (ACI)**, and **Multimodal NLP Risk Fusion**."
 )
 
 st.sidebar.header("Engine Parameters")
@@ -62,48 +44,55 @@ def load_full_pipeline(period: str, gamma: float):
     feat_df, model_df, garch_fit = engineer_quant_features(df_clean)
     econ_res = run_econometric_and_causal_suite(model_df, garch_fit)
     ml_res = train_and_evaluate_conformal_engine(feat_df, model_df, gamma=gamma)
-    news = fetch_live_macro_news(limit=12)
-    return df_clean, model_df, econ_res, ml_res, news
+    raw_news = fetch_live_macro_news(limit=12)
+    sentiment_res = score_news_sentiment(raw_news)
+    return df_clean, model_df, econ_res, ml_res, sentiment_res
 
-with st.spinner("Ingesting live market APIs & running econometric/conformal models..."):
-    df_clean, model_df, econ_res, ml_res, news_items = load_full_pipeline(lookback_period, aci_gamma)
+with st.spinner("Ingesting live market APIs, NLP news sentiment & running conformal models..."):
+    df_clean, model_df, econ_res, ml_res, sent_res = load_full_pipeline(lookback_period, aci_gamma)
 
 brief = ml_res["live_brief"]
 metrics = ml_res["metrics"]
 causal = econ_res["causal_ate"]
 garch_s = econ_res["garch_summary"]
+default_alloc = compute_portfolio_risk_allocation(500000.0, 1.0, brief, sent_res["news_fear_index"])
 
 st.subheader(f"Live Autonomous Risk Brief (Market Close: {brief['as_of_date']})")
-is_elevated = (brief["tail_risk_prob"] >= brief["alert_thresh_pct"]) or (brief["latest_vix"] > causal["vix_threshold"])
+is_elevated = (default_alloc["multimodal_risk_pct"] >= brief["alert_thresh_pct"]) or (brief["latest_vix"] > causal["vix_threshold"])
 
 if is_elevated:
     st.error(
-        f"**ELEVATED TAIL-RISK REGIME:** Tail-Risk Probability is **{brief['tail_risk_prob']}%** "
-        f"(Alert Threshold: {brief['alert_thresh_pct']}%). Defensive hedging / position sizing reduction advised."
+        f"**ELEVATED TAIL-RISK REGIME:** Quant Tail-Risk is **{brief['tail_risk_prob']}%** | "
+        f"Multimodal Risk Score (Quant + NLP News): **{default_alloc['multimodal_risk_pct']}%** "
+        f"(Threshold: {brief['alert_thresh_pct']}%). Suggested Equity Allocation: **{default_alloc['recommended_equity_pct']}%**."
     )
 else:
     st.success(
-        f"**NORMAL VOLATILITY REGIME:** Tail-Risk Probability is **{brief['tail_risk_prob']}%** "
-        f"(Alert Threshold: {brief['alert_thresh_pct']}%). Standard risk allocation supported."
+        f"**NORMAL VOLATILITY REGIME:** Quant Tail-Risk is **{brief['tail_risk_prob']}%** | "
+        f"Multimodal Risk Score: **{default_alloc['multimodal_risk_pct']}%** "
+        f"(Threshold: {brief['alert_thresh_pct']}%). Suggested Equity Allocation: **{default_alloc['recommended_equity_pct']}%**."
     )
 
-# Clean 3 + 2 responsive card layout so nothing ever gets cut off with '...'
 r1_c1, r1_c2, r1_c3 = st.columns(3)
 r1_c1.metric("India VIX Level", f"{brief['latest_vix']}", f"Causal Threshold: {causal['vix_threshold']}")
 r1_c2.metric("GARCH(1,1)-t Volatility", f"{brief['latest_garch_vol']}%", f"Persistence: {garch_s['persistence']}")
 r1_c3.metric("Next-Day |Nifty| Forecast", f"{brief['pred_abs_ret']}%", f"OOS RMSE: {metrics['oos_rmse']}%")
 
-r2_c1, r2_c2 = st.columns(2)
+r2_c1, r2_c2, r2_c3 = st.columns(3)
 r2_c1.metric("95% ACI Risk Bound", f"[0%, {brief['aci_upper_95']}%]", f"OOS Coverage: {metrics['aci_cov_95']}%")
-r2_c2.metric("Tail-Risk Shock Probability", f"{brief['tail_risk_prob']}%", f"OOS AUC: {metrics['oos_auc']}")
+r2_c2.metric("Quant Tail-Risk Prob", f"{brief['tail_risk_prob']}%", f"OOS AUC: {metrics['oos_auc']}")
+r2_c3.metric("Multimodal Risk (Quant+NLP)", f"{default_alloc['multimodal_risk_pct']}%", f"News Fear Index: {sent_res['news_fear_index']}/100")
 
 st.divider()
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "1. Adaptive Conformal Volatility",
     "2. Econometrics & Causal ATE",
     "3. Systemic Contagion Graph",
-    "4. Live Equity & Macro Headlines"
+    "4. Live News & NLP Sentiment",
+    "5. Portfolio Sizing & CVaR",
+    "6. What-If Stress Simulator",
+    "7. Auto Telegram Alerts"
 ])
 
 with tab1:
@@ -181,10 +170,78 @@ with tab3:
         st.dataframe(hub_df, use_container_width=True)
 
 with tab4:
-    st.markdown("### Real-Time Indian Equity & Macro Headlines (Last 7 Days)")
-    if news_items:
-        for item in news_items:
-            st.markdown(f"- **[{item['title']}]({item['link']})**")
+    st.markdown("### Real-Time Indian Equity Headlines & NLP Sentiment Index")
+    s1, s2, s3 = st.columns(3)
+    s1.metric("News Fear Index (0-100)", f"{sent_res['news_fear_index']}", "50 = Neutral | >50 = Bearish Fear")
+    s2.metric("Bullish Headlines", f"{sent_res['bullish_count']} / {sent_res['total_count']}")
+    s3.metric("Bearish Headlines", f"{sent_res['bearish_count']} / {sent_res['total_count']}")
+
+    st.divider()
+    if sent_res["enriched_news"]:
+        for item in sent_res["enriched_news"]:
+            badge = "🟢 Bullish" if item["sentiment"] == "Bullish" else ("🔴 Bearish" if item["sentiment"] == "Bearish" else "⚪ Neutral")
+            st.markdown(f"- **{badge} (`{item['score']}`)** — **[{item['title']}]({item['link']})**")
             st.caption(f"Published: {item['published']}")
     else:
         st.warning("Live RSS news feed temporarily unavailable; econometric models remain active.")
+
+with tab5:
+    st.markdown("### Dynamic Position Sizing & 95% ACI Tail-Loss (CVaR) Calculator")
+    st.write("Adjust your total capital and daily risk budget to compute volatility-targeted & tail-risk-adjusted equity exposure.")
+    p_col1, p_col2 = st.columns(2)
+    user_capital = p_col1.number_input("Total Portfolio Capital (INR ₹)", min_value=10000, max_value=100000000, value=500000, step=25000)
+    target_vol = p_col2.slider("Target Daily Portfolio Volatility (%)", 0.3, 2.5, 1.0, 0.1)
+
+    alloc = compute_portfolio_risk_allocation(float(user_capital), float(target_vol), brief, sent_res["news_fear_index"])
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Recommended Equity Exposure", f"{alloc['recommended_equity_pct']}%", f"Deploy ₹{alloc['equity_inr']:,.0f}")
+    m2.metric("Safe Cash / Liquid Hedge", f"{alloc['safe_cash_pct']}%", f"Hold ₹{alloc['cash_inr']:,.0f}")
+    m3.metric("95% ACI Max 1-Day Drawdown", f"₹{alloc['hedged_aci_loss_inr']:,.0f}", f"Saves ₹{alloc['capital_saved_inr']:,.0f} vs Unhedged")
+
+    st.info(
+        f"**Execution Guidance:** Under current GARCH volatility (`{brief['latest_garch_vol']}%`) and Multimodal Risk (`{alloc['multimodal_risk_pct']}%`), "
+        f"deploying **₹{alloc['equity_inr']:,.0f}** caps your 95% worst-case single-day Nifty shock loss at **₹{alloc['hedged_aci_loss_inr']:,.0f}** "
+        f"(instead of **₹{alloc['unhedged_aci_loss_inr']:,.0f}** if 100% invested)."
+    )
+
+with tab6:
+    st.markdown("### Interactive What-If Macro & Volatility Stress Simulator")
+    st.write("Simulate sudden macro shocks to inspect how our Causal Double-ML & Conformal models re-price next-day market risk.")
+    w1, w2, w3 = st.columns(3)
+    sim_vix = w1.slider("Simulated India VIX Level", 10.0, 38.0, float(brief["latest_vix"]), 0.5)
+    sim_crude = w2.slider("Crude Oil 1-Day Shock (%)", -10.0, 15.0, 0.0, 0.5)
+    sim_fx = w3.slider("USD/INR Depreciation Shock (%)", -1.5, 3.0, 0.0, 0.1)
+
+    stress_res = simulate_what_if_stress(sim_vix, sim_crude, sim_fx, brief, causal)
+
+    st_c1, st_c2, st_c3 = st.columns(3)
+    st_c1.metric("Simulated Tail-Risk Prob", f"{stress_res['stressed_prob']}%", f"{stress_res['prob_delta']:+.2f}% vs Live")
+    st_c2.metric("Simulated 95% ACI Upper Bound", f"{stress_res['stressed_aci_upper']}%", f"{stress_res['aci_delta']:+.2f}% vs Live")
+    st_c3.metric(
+        "Regime Status",
+        "EXTREME CRISIS" if stress_res["stressed_prob"] >= 60 else ("ELEVATED RISK" if stress_res["stressed_prob"] >= brief["alert_thresh_pct"] else "NORMAL"),
+        f"Causal VIX Cutoff: {causal['vix_threshold']}"
+    )
+
+with tab7:
+    st.markdown("### Autonomous Morning Telegram Risk Alert Bot")
+    st.write(
+        "Receive automated daily risk briefs on your phone at **9:00 AM IST** (15 mins before NSE market open) via GitHub Actions, "
+        "or send an instant test alert right now."
+    )
+    tg_token = st.text_input("Telegram Bot Token (from @BotFather)", value=os.getenv("TELEGRAM_BOT_TOKEN", ""), type="password")
+    tg_chat_id = st.text_input("Telegram Chat ID (from @userinfobot)", value=os.getenv("TELEGRAM_CHAT_ID", ""))
+
+    if st.button("Send Instant Risk Brief to Telegram Now"):
+        ok, status_msg = send_telegram_risk_alert(tg_token, tg_chat_id, brief, default_alloc)
+        if ok:
+            st.success(status_msg)
+        else:
+            st.error(status_msg)
+
+    with st.expander("How to enable 24x7 Automated 9:00 AM IST Daily Alerts (Free on GitHub)"):
+        st.markdown("1. Open Telegram, message **`@BotFather`** -> `/newbot` to copy your **Bot Token**.")
+        st.markdown("2. Message **`@userinfobot`** to copy your numeric **Chat ID**.")
+        st.markdown("3. In your GitHub repo (`rahul25118/quantvault-ai`) -> **Settings -> Secrets and variables -> Actions**, add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.")
+        st.markdown("4. The included `.github/workflows/daily_alert.yml` workflow runs every weekday at **9:00 AM IST** automatically!")
