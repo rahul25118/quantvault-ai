@@ -18,24 +18,196 @@ from quant_engine import (
 )
 
 st.set_page_config(
-    page_title="QuantVault AI | Institutional Risk Engine",
+    page_title="QuantVault AI | Institutional Risk Terminal",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-css_style = "<style>.block-container { padding: 1.4rem; max-width: 100%; } [data-testid='stMetricValue'] { font-size: 1.6rem !important; white-space: normal !important; } [data-testid='stMetricLabel'] { font-size: 0.88rem !important; white-space: normal !important; }</style>"
-st.markdown(css_style, unsafe_allow_html=True)
+# Institutional Quant Terminal CSS (Obsidian + Glassmorphism + Neon Cyan/Crimson)
+terminal_css = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 
-st.title("QuantVault AI — Autonomous Risk & Decision Intelligence")
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+}
+
+.stApp {
+    background: radial-gradient(circle at 15% 10%, #0E192F 0%, #070B14 55%, #05080F 100%);
+    color: #E2E8F0;
+}
+
+.block-container {
+    padding-top: 1.2rem;
+    padding-bottom: 2rem;
+    padding-left: 1.6rem;
+    padding-right: 1.6rem;
+    max-width: 100%;
+}
+
+/* Hero Institutional Header */
+.qv-hero {
+    background: linear-gradient(135deg, rgba(14, 23, 42, 0.92) 0%, rgba(11, 18, 33, 0.96) 100%);
+    border: 1px solid rgba(0, 240, 255, 0.25);
+    border-left: 4px solid #00F0FF;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 1.2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.qv-badge {
+    display: inline-block;
+    background: rgba(0, 240, 255, 0.12);
+    color: #00F0FF;
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+}
+
+.qv-title {
+    font-size: 1.85rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #F8FAFC;
+    margin: 0;
+}
+
+.qv-subtitle {
+    color: #94A3B8;
+    font-size: 0.92rem;
+    margin-top: 0.35rem;
+    margin-bottom: 0;
+}
+
+/* Glassmorphic KPI Cards */
+[data-testid="stMetric"] {
+    background: linear-gradient(145deg, rgba(16, 24, 43, 0.88), rgba(10, 16, 30, 0.95));
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-top: 2px solid rgba(0, 240, 255, 0.45);
+    border-radius: 12px;
+    padding: 0.95rem 1.1rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+[data-testid="stMetric"]:hover {
+    transform: translateY(-2px);
+    border-color: rgba(0, 240, 255, 0.55);
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94A3B8 !important;
+    white-space: normal !important;
+}
+
+[data-testid="stMetricValue"] {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 1.6rem !important;
+    font-weight: 700 !important;
+    color: #F8FAFC !important;
+    white-space: normal !important;
+}
+
+[data-testid="stMetricDelta"] {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.8rem !important;
+}
+
+/* Regime Alert Banners */
+.regime-card-danger {
+    background: linear-gradient(90deg, rgba(255, 59, 92, 0.16) 0%, rgba(15, 23, 42, 0.92) 100%);
+    border: 1px solid rgba(255, 59, 92, 0.45);
+    border-left: 5px solid #FF3B5C;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.1rem;
+    color: #FFE4E6;
+}
+
+.regime-card-safe {
+    background: linear-gradient(90deg, rgba(0, 230, 118, 0.14) 0%, rgba(15, 23, 42, 0.92) 100%);
+    border: 1px solid rgba(0, 230, 118, 0.4);
+    border-left: 5px solid #00E676;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.1rem;
+    color: #DCFCE7;
+}
+
+/* Styled Navigation Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0.45rem;
+    background-color: rgba(11, 18, 33, 0.85);
+    padding: 0.45rem;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: 7px;
+    padding: 0.45rem 0.85rem;
+    color: #94A3B8;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.18), rgba(0, 150, 255, 0.15)) !important;
+    color: #00F0FF !important;
+    border: 1px solid rgba(0, 240, 255, 0.4) !important;
+}
+
+/* News Feed Cards */
+.news-card {
+    background: rgba(13, 21, 38, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 9px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.6rem;
+}
+
+.news-card a {
+    color: #F1F5F9 !important;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.news-card a:hover {
+    color: #00F0FF !important;
+}
+</style>
+"""
+st.markdown(terminal_css, unsafe_allow_html=True)
+
+# Hero Header
 st.markdown(
-    "Live multi-asset econometrics (`GARCH(1,1)-t`), Orthogonalized Double ML Causal Inference, "
-    "Gaussian Precision Contagion Network, **Adaptive Conformal Inference (ACI)**, and **Multimodal NLP Risk Fusion**."
+    """
+    <div class="qv-hero">
+        <div class="qv-badge">● AUTONOMOUS QUANT TERMINAL &nbsp;|&nbsp; GARCH(1,1)-t • DOUBLE ML • ACI • NLP FUSION</div>
+        <h1 class="qv-title">QuantVault AI — Institutional Risk & Decision Intelligence</h1>
+        <p class="qv-subtitle">
+            Real-time Indian equity tail-risk quantification, causal macro regime diagnostics, precision contagion networks, and dynamic CVaR position sizing.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
-st.sidebar.header("Engine Parameters")
+# Collapsible Left Sidebar
+st.sidebar.header("⚙️ Engine Parameters")
 lookback_period = st.sidebar.selectbox("Historical Calibration Window", ["5y", "3y", "2y"], index=0)
 aci_gamma = st.sidebar.slider("ACI Online Learning Rate (gamma)", 0.01, 0.15, 0.05, 0.01)
-if st.sidebar.button("Refresh Live Market & Macro Data"):
+if st.sidebar.button("🔄 Refresh Live Market & Macro Data"):
     st.cache_data.clear()
 
 @st.cache_data(ttl=3600)
@@ -48,7 +220,7 @@ def load_full_pipeline(period: str, gamma: float):
     sentiment_res = score_news_sentiment(raw_news)
     return df_clean, model_df, econ_res, ml_res, sentiment_res
 
-with st.spinner("Ingesting live market APIs, NLP news sentiment & running conformal models..."):
+with st.spinner("Initializing QuantVault Institutional Terminal & live econometric pipelines..."):
     df_clean, model_df, econ_res, ml_res, sent_res = load_full_pipeline(lookback_period, aci_gamma)
 
 brief = ml_res["live_brief"]
@@ -57,68 +229,103 @@ causal = econ_res["causal_ate"]
 garch_s = econ_res["garch_summary"]
 default_alloc = compute_portfolio_risk_allocation(500000.0, 1.0, brief, sent_res["news_fear_index"])
 
-st.subheader(f"Live Autonomous Risk Brief (Market Close: {brief['as_of_date']})")
+st.markdown(f"#### 📡 Live Autonomous Risk Brief &nbsp; `CLOSE: {brief['as_of_date']}`")
 is_elevated = (default_alloc["multimodal_risk_pct"] >= brief["alert_thresh_pct"]) or (brief["latest_vix"] > causal["vix_threshold"])
 
 if is_elevated:
-    st.error(
-        f"**ELEVATED TAIL-RISK REGIME:** Quant Tail-Risk is **{brief['tail_risk_prob']}%** | "
-        f"Multimodal Risk Score (Quant + NLP News): **{default_alloc['multimodal_risk_pct']}%** "
-        f"(Threshold: {brief['alert_thresh_pct']}%). Suggested Equity Allocation: **{default_alloc['recommended_equity_pct']}%**."
+    st.markdown(
+        f"""
+        <div class="regime-card-danger">
+            <strong>🚨 ELEVATED TAIL-RISK REGIME DETECTED</strong><br>
+            Quant Tail-Risk Probability is <strong>{brief['tail_risk_prob']}%</strong> &nbsp;|&nbsp;
+            Multimodal Risk Score (Quant + NLP News): <strong>{default_alloc['multimodal_risk_pct']}%</strong>
+            (Alert Cutoff: {brief['alert_thresh_pct']}%) &nbsp;|&nbsp;
+            Recommended Equity Exposure: <strong>{default_alloc['recommended_equity_pct']}%</strong>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 else:
-    st.success(
-        f"**NORMAL VOLATILITY REGIME:** Quant Tail-Risk is **{brief['tail_risk_prob']}%** | "
-        f"Multimodal Risk Score: **{default_alloc['multimodal_risk_pct']}%** "
-        f"(Threshold: {brief['alert_thresh_pct']}%). Suggested Equity Allocation: **{default_alloc['recommended_equity_pct']}%**."
+    st.markdown(
+        f"""
+        <div class="regime-card-safe">
+            <strong>✅ NORMAL VOLATILITY REGIME</strong><br>
+            Quant Tail-Risk Probability is <strong>{brief['tail_risk_prob']}%</strong> &nbsp;|&nbsp;
+            Multimodal Risk Score (Quant + NLP News): <strong>{default_alloc['multimodal_risk_pct']}%</strong>
+            (Alert Cutoff: {brief['alert_thresh_pct']}%) &nbsp;|&nbsp;
+            Recommended Equity Exposure: <strong>{default_alloc['recommended_equity_pct']}%</strong>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
+# 6 Glassmorphic KPI Cards (3 + 3 Responsive Grid)
 r1_c1, r1_c2, r1_c3 = st.columns(3)
-r1_c1.metric("India VIX Level", f"{brief['latest_vix']}", f"Causal Threshold: {causal['vix_threshold']}")
+r1_c1.metric("India VIX Level", f"{brief['latest_vix']}", f"Causal Cutoff: {causal['vix_threshold']}")
 r1_c2.metric("GARCH(1,1)-t Volatility", f"{brief['latest_garch_vol']}%", f"Persistence: {garch_s['persistence']}")
 r1_c3.metric("Next-Day |Nifty| Forecast", f"{brief['pred_abs_ret']}%", f"OOS RMSE: {metrics['oos_rmse']}%")
 
+st.write("")
 r2_c1, r2_c2, r2_c3 = st.columns(3)
 r2_c1.metric("95% ACI Risk Bound", f"[0%, {brief['aci_upper_95']}%]", f"OOS Coverage: {metrics['aci_cov_95']}%")
-r2_c2.metric("Quant Tail-Risk Prob", f"{brief['tail_risk_prob']}%", f"OOS AUC: {metrics['oos_auc']}")
+r2_c2.metric("Quant Tail-Risk Prob", f"{brief['tail_risk_prob']}%", f"OOS ROC-AUC: {metrics['oos_auc']}")
 r2_c3.metric("Multimodal Risk (Quant+NLP)", f"{default_alloc['multimodal_risk_pct']}%", f"News Fear Index: {sent_res['news_fear_index']}/100")
 
-st.divider()
+st.write("")
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "1. Adaptive Conformal Volatility",
+    "1. Adaptive Conformal Band",
     "2. Econometrics & Causal ATE",
-    "3. Systemic Contagion Graph",
-    "4. Live News & NLP Sentiment",
+    "3. Contagion Network",
+    "4. Live News & NLP Fusion",
     "5. Portfolio Sizing & CVaR",
-    "6. What-If Stress Simulator",
-    "7. Auto Telegram Alerts"
+    "6. What-If Stress Lab",
+    "7. Telegram Bot Alerts"
 ])
 
+# Dark Institutional Matplotlib Styling Helper
+def style_dark_ax(ax, fig):
+    fig.patch.set_facecolor("#0B1221")
+    ax.set_facecolor("#0E172A")
+    ax.tick_params(colors="#94A3B8", labelsize=9)
+    ax.xaxis.label.set_color("#CBD5E1")
+    ax.yaxis.label.set_color("#CBD5E1")
+    ax.title.set_color("#F8FAFC")
+    for spine in ax.spines.values():
+        spine.set_color("#1E293B")
+    ax.grid(True, linestyle="--", linewidth=0.5, color="#1E293B", alpha=0.8)
+
+# --- TAB 1 ---
 with tab1:
     col_a, col_b = st.columns([2, 1])
     with col_a:
         fig1, ax1 = plt.subplots(figsize=(10, 4.5))
-        ax1.plot(ml_res["dates_test"], ml_res["y_reg_test"], color="#1f77b4", alpha=0.85, label="Actual |Nifty Return| (%)")
-        ax1.plot(ml_res["dates_test"], ml_res["test_reg_preds"], color="#d62728", linestyle="--", label="Point Forecast")
+        style_dark_ax(ax1, fig1)
+        ax1.plot(ml_res["dates_test"], ml_res["y_reg_test"], color="#00F0FF", linewidth=1.3, alpha=0.9, label="Actual |Nifty Return| (%)")
+        ax1.plot(ml_res["dates_test"], ml_res["test_reg_preds"], color="#FBBF24", linestyle="--", linewidth=1.2, label="Point Forecast")
         ax1.fill_between(
             ml_res["dates_test"], ml_res["aci_lower_95"], ml_res["aci_upper_95"],
-            color="#ff9896", alpha=0.35, label=f"95% Adaptive Conformal Band (Cov: {metrics['aci_cov_95']}%)"
+            color="#FF3B5C", alpha=0.25, label=f"95% Adaptive Conformal Band (Cov: {metrics['aci_cov_95']}%)"
         )
-        ax1.set_title("Out-of-Sample Volatility & 95% Adaptive Conformal Prediction Interval", fontweight="bold")
+        ax1.set_title("Out-of-Sample Volatility & 95% Adaptive Conformal Interval", fontweight="bold")
         ax1.set_ylabel("Daily Absolute Return (%)")
-        ax1.legend(loc="upper right")
+        leg1 = ax1.legend(loc="upper right", facecolor="#0B1221", edgecolor="#334155")
+        for text in leg1.get_texts():
+            text.set_color("#E2E8F0")
         st.pyplot(fig1)
 
     with col_b:
         fig2, ax2 = plt.subplots(figsize=(5, 4.5))
+        style_dark_ax(ax2, fig2)
         fpr, tpr, _ = roc_curve(ml_res["y_clf_test"], ml_res["test_clf_probs"])
-        ax2.plot(fpr, tpr, color="#2ca02c", linewidth=2, label=f"Tail-Risk RF (AUC = {metrics['oos_auc']})")
-        ax2.plot([0, 1], [0, 1], color="gray", linestyle="--")
-        ax2.set_title("Out-of-Sample Tail-Risk ROC Curve", fontweight="bold")
+        ax2.plot(fpr, tpr, color="#00E676", linewidth=2.2, label=f"Tail-Risk RF (AUC = {metrics['oos_auc']})")
+        ax2.plot([0, 1], [0, 1], color="#64748B", linestyle="--")
+        ax2.set_title("Out-of-Sample Tail-Risk ROC", fontweight="bold")
         ax2.set_xlabel("False Positive Rate")
         ax2.set_ylabel("True Positive Rate")
-        ax2.legend(loc="lower right")
+        leg2 = ax2.legend(loc="lower right", facecolor="#0B1221", edgecolor="#334155")
+        for text in leg2.get_texts():
+            text.set_color("#E2E8F0")
         st.pyplot(fig2)
 
     st.info(
@@ -126,6 +333,7 @@ with tab1:
         f"under regime shifts, whereas online **Adaptive Conformal Inference (ACI)** restored empirical coverage to **{metrics['aci_cov_95']}%**."
     )
 
+# --- TAB 2 ---
 with tab2:
     st.markdown("### Orthogonalized Double ML Causal Impact")
     st.write(
@@ -144,20 +352,23 @@ with tab2:
         st.markdown("**Granger Causality Lead-Lag Tests**")
         st.dataframe(econ_res["granger_df"], use_container_width=True)
 
+# --- TAB 3 ---
 with tab3:
     col_g1, col_g2 = st.columns([1.4, 1])
     with col_g1:
         G = econ_res["graph"]
         strength = econ_res["node_strength"]
         fig3, ax3 = plt.subplots(figsize=(7, 5))
+        fig3.patch.set_facecolor("#0B1221")
+        ax3.set_facecolor("#0B1221")
         pos = nx.circular_layout(G)
-        edge_colors = ["#d62728" if d["weight"] < 0 else "#1f77b4" for _, _, d in G.edges(data=True)]
-        edge_widths = [abs(d["weight"]) * 6 for _, _, d in G.edges(data=True)]
-        node_sizes = [650 + strength[n] * 900 for n in G.nodes()]
-        nx.draw_networkx_nodes(G, pos, ax=ax3, node_size=node_sizes, node_color="#ffbb78", edgecolors="black")
+        edge_colors = ["#FF3B5C" if d["weight"] < 0 else "#00F0FF" for _, _, d in G.edges(data=True)]
+        edge_widths = [abs(d["weight"]) * 6.5 for _, _, d in G.edges(data=True)]
+        node_sizes = [750 + strength[n] * 950 for n in G.nodes()]
+        nx.draw_networkx_nodes(G, pos, ax=ax3, node_size=node_sizes, node_color="#1E293B", edgecolors="#00F0FF", linewidths=2)
         nx.draw_networkx_edges(G, pos, ax=ax3, width=edge_widths, edge_color=edge_colors, alpha=0.85)
-        nx.draw_networkx_labels(G, pos, ax=ax3, font_size=9.5, font_weight="bold")
-        ax3.set_title("Systemic Contagion Network (Precision Matrix Partial Correlations)", fontweight="bold")
+        nx.draw_networkx_labels(G, pos, ax=ax3, font_size=9.5, font_weight="bold", font_color="#F8FAFC")
+        ax3.set_title("Systemic Contagion Network (Precision Partial Correlations)", fontweight="bold", color="#F8FAFC")
         ax3.axis("off")
         st.pyplot(fig3)
 
@@ -169,6 +380,7 @@ with tab3:
         )
         st.dataframe(hub_df, use_container_width=True)
 
+# --- TAB 4 ---
 with tab4:
     st.markdown("### Real-Time Indian Equity Headlines & NLP Sentiment Index")
     s1, s2, s3 = st.columns(3)
@@ -176,15 +388,24 @@ with tab4:
     s2.metric("Bullish Headlines", f"{sent_res['bullish_count']} / {sent_res['total_count']}")
     s3.metric("Bearish Headlines", f"{sent_res['bearish_count']} / {sent_res['total_count']}")
 
-    st.divider()
+    st.write("")
     if sent_res["enriched_news"]:
         for item in sent_res["enriched_news"]:
-            badge = "🟢 Bullish" if item["sentiment"] == "Bullish" else ("🔴 Bearish" if item["sentiment"] == "Bearish" else "⚪ Neutral")
-            st.markdown(f"- **{badge} (`{item['score']}`)** — **[{item['title']}]({item['link']})**")
-            st.caption(f"Published: {item['published']}")
+            badge = "🟢 BULLISH" if item["sentiment"] == "Bullish" else ("🔴 BEARISH" if item["sentiment"] == "Bearish" else "⚪ NEUTRAL")
+            st.markdown(
+                f"""
+                <div class="news-card">
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:0.78rem; color:#00F0FF;">{badge} ({item['score']})</span><br>
+                    <a href="{item['link']}" target="_blank">{item['title']}</a><br>
+                    <span style="font-size:0.76rem; color:#64748B;">Published: {item['published']}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
     else:
         st.warning("Live RSS news feed temporarily unavailable; econometric models remain active.")
 
+# --- TAB 5 ---
 with tab5:
     st.markdown("### Dynamic Position Sizing & 95% ACI Tail-Loss (CVaR) Calculator")
     st.write("Adjust your total capital and daily risk budget to compute volatility-targeted & tail-risk-adjusted equity exposure.")
@@ -205,6 +426,7 @@ with tab5:
         f"(instead of **₹{alloc['unhedged_aci_loss_inr']:,.0f}** if 100% invested)."
     )
 
+# --- TAB 6 ---
 with tab6:
     st.markdown("### Interactive What-If Macro & Volatility Stress Simulator")
     st.write("Simulate sudden macro shocks to inspect how our Causal Double-ML & Conformal models re-price next-day market risk.")
@@ -224,24 +446,24 @@ with tab6:
         f"Causal VIX Cutoff: {causal['vix_threshold']}"
     )
 
+# --- TAB 7 ---
 with tab7:
     st.markdown("### Autonomous Morning Telegram Risk Alert Bot")
     st.write(
-        "Receive automated daily risk briefs on your phone at **9:00 AM IST** (15 mins before NSE market open) via GitHub Actions, "
+        "Receive automated daily risk briefs on your phone at **9:00 AM IST** (15 mins before NSE market open), "
         "or send an instant test alert right now."
     )
     tg_token = st.text_input("Telegram Bot Token (from @BotFather)", value=os.getenv("TELEGRAM_BOT_TOKEN", ""), type="password")
     tg_chat_id = st.text_input("Telegram Chat ID (from @userinfobot)", value=os.getenv("TELEGRAM_CHAT_ID", ""))
 
-    if st.button("Send Instant Risk Brief to Telegram Now"):
+    if st.button("🚀 Send Instant Risk Brief to Telegram Now"):
         ok, status_msg = send_telegram_risk_alert(tg_token, tg_chat_id, brief, default_alloc)
         if ok:
             st.success(status_msg)
         else:
             st.error(status_msg)
 
-    with st.expander("How to enable 24x7 Automated 9:00 AM IST Daily Alerts (Free on GitHub)"):
-        st.markdown("1. Open Telegram, message **`@BotFather`** -> `/newbot` to copy your **Bot Token**.")
-        st.markdown("2. Message **`@userinfobot`** to copy your numeric **Chat ID**.")
-        st.markdown("3. In your GitHub repo (`rahul25118/quantvault-ai`) -> **Settings -> Secrets and variables -> Actions**, add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.")
-        st.markdown("4. The included `.github/workflows/daily_alert.yml` workflow runs every weekday at **9:00 AM IST** automatically!")
+    with st.expander("How to get your Free Telegram Bot Token & Chat ID in 60 seconds"):
+        st.markdown("1. Open Telegram, search **`@BotFather`** and send `/newbot` to get your **Bot Token** (then send `/start` to your new bot).")
+        st.markdown("2. Search **`@userinfobot`** and send `/start` to copy your numeric **Chat ID**.")
+        st.markdown("3. Paste both above and click **Send Instant Risk Brief to Telegram Now**.")
