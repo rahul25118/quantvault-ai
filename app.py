@@ -6,7 +6,7 @@ import streamlit as st
 from sklearn.metrics import roc_curve
 from quant_engine import (
     engineer_quant_features,
-    fetch_live_live_macro_news if False else fetch_live_macro_news,
+    fetch_live_macro_news,
     fetch_live_market_data,
     run_econometric_and_causal_suite,
     train_and_evaluate_conformal_engine,
