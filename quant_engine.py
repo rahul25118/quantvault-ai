@@ -65,29 +65,72 @@ def fetch_live_market_data(period: str = "5y") -> pd.DataFrame:
     )
     return df
 
-def fetch_live_macro_news(limit: int = 8) -> list:
-    """Fetches strictly fresh (last 48 hours) live Indian equity & macro news, excluding archival bulletins."""
+def fetch_live_macro_news(limit: int = 16) -> list:
+    """Aggregates real-time, zero-cost market news from ET, LiveMint, Business Standard, Moneycontrol & Yahoo Finance."""
     from email.utils import parsedate_to_datetime
-    url = "https://news.google.com/rss/search?q=(Nifty+50+OR+Sensex+OR+RBI+OR+Indian+stock+market)+when:2d&hl=en-IN&gl=IN&ceid=IN:en"
+    feeds = [
+        ("Economic Times", "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"),
+        ("LiveMint", "https://www.livemint.com/rss/markets"),
+        ("Business Standard", "https://www.business-standard.com/rss/markets-106.rss"),
+        ("Moneycontrol", "https://www.moneycontrol.com/rss/latestnews.xml"),
+    ]
+    headers = {"User-Agent": "Mozilla/5.0"}
     headlines = []
-    try:
-        r = requests.get(url, timeout=8)
-        root = ET.fromstring(r.content)
-        now_utc = pd.Timestamp.now(tz="UTC")
-        for item in root.findall(".//item"):
-            title = item.find("title").text if item.find("title") is not None else ""
-            link = item.find("link").text if item.find("link") is not None else ""
-            pub_date = item.find("pubDate").text if item.find("pubDate") is not None else ""
-            try:
-                dt = pd.Timestamp(parsedate_to_datetime(pub_date)).tz_convert("UTC")
-            except Exception:
-                continue
-            # Strictly keep only articles published within the last 72 hours
-            if (now_utc - dt).total_seconds() <= 72 * 3600:
-                headlines.append({"title": title, "link": link, "published": pub_date, "dt": dt})
-        headlines.sort(key=lambda x: x["dt"], reverse=True)
-    except Exception:
-        pass
+    seen_titles = set()
+
+    # 1. Fetch from all 4 Indian Financial RSS Feeds
+    for source_name, url in feeds:
+        try:
+            r = requests.get(url, headers=headers, timeout=8)
+            root = ET.fromstring(r.content)
+            for item in root.findall(".//item")[:6]:
+                raw_title = item.find("title").text if item.find("title") is not None else ""
+                clean_title = raw_title.strip()
+                if not clean_title or clean_title.lower() in seen_titles:
+                    continue
+                seen_titles.add(clean_title.lower())
+                link = item.find("link").text if item.find("link") is not None else ""
+                pub_date = item.find("pubDate").text if item.find("pubDate") is not None else ""
+                try:
+                    dt = pd.Timestamp(parsedate_to_datetime(pub_date)).tz_convert("UTC")
+                except Exception:
+                    dt = pd.Timestamp.now(tz="UTC")
+                headlines.append({
+                    "title": f"[{source_name}] {clean_title}",
+                    "link": link.strip(),
+                    "published": pub_date,
+                    "dt": dt
+                })
+        except Exception:
+            continue
+
+    # 2. Fetch live Yahoo Finance Indian Equity News (^NSEI & RELIANCE.NS)
+    for sym in ["^NSEI", "RELIANCE.NS"]:
+        try:
+            yf_news = yf.Ticker(sym).news or []
+            for entry in yf_news[:4]:
+                content = entry.get("content", entry)
+                clean_title = (content.get("title") or "").strip()
+                if not clean_title or clean_title.lower() in seen_titles:
+                    continue
+                seen_titles.add(clean_title.lower())
+                link_obj = content.get("canonicalUrl") or content.get("clickThroughUrl") or {}
+                link = link_obj.get("url") if isinstance(link_obj, dict) else (entry.get("link") or "")
+                pub_str = content.get("pubDate") or ""
+                try:
+                    dt = pd.to_datetime(pub_str, utc=True) if pub_str else pd.Timestamp.now(tz="UTC")
+                except Exception:
+                    dt = pd.Timestamp.now(tz="UTC")
+                headlines.append({
+                    "title": f"[Yahoo Finance] {clean_title}",
+                    "link": link,
+                    "published": str(dt.strftime("%a, %d %b %Y %H:%M GMT")),
+                    "dt": dt
+                })
+        except Exception:
+            continue
+
+    headlines.sort(key=lambda x: x["dt"], reverse=True)
     return headlines[:limit]
 
 def engineer_quant_features(df_clean: pd.DataFrame):
