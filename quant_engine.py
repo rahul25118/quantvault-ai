@@ -65,28 +65,27 @@ def fetch_live_market_data(period: str = "5y") -> pd.DataFrame:
     )
     return df
 
-def fetch_live_macro_news(limit: int = 16) -> list:
-    """Aggregates real-time, zero-cost market news from ET, LiveMint, Business Standard, Moneycontrol & Yahoo Finance."""
+def fetch_live_macro_news(limit: int = 15) -> list:
+    """Fetches real-time Indian market news from ET, LiveMint, Business Standard, Moneycontrol & Yahoo via cloud-safe feeds."""
     from email.utils import parsedate_to_datetime
-    feeds = [
-        ("Economic Times", "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"),
-        ("LiveMint", "https://www.livemint.com/rss/markets"),
-        ("Business Standard", "https://www.business-standard.com/rss/markets-106.rss"),
-        ("Moneycontrol", "https://www.moneycontrol.com/rss/latestnews.xml"),
-    ]
-    headers = {"User-Agent": "Mozilla/5.0"}
     headlines = []
     seen_titles = set()
 
-    # 1. Fetch from all 4 Indian Financial RSS Feeds
-    for source_name, url in feeds:
+    # 1. Cloud-safe Google News RSS restricted strictly to top 4 Indian business dailies (last 2 days)
+    rss_queries = [
+        "https://news.google.com/rss/search?q=(Nifty+OR+Sensex+OR+stock+market)+(site:economictimes.indiatimes.com+OR+site:livemint.com)+when:2d&hl=en-IN&gl=IN&ceid=IN:en",
+        "https://news.google.com/rss/search?q=(Nifty+OR+Sensex+OR+FII+OR+economy)+(site:business-standard.com+OR+site:moneycontrol.com)+when:2d&hl=en-IN&gl=IN&ceid=IN:en",
+    ]
+    for url in rss_queries:
         try:
-            r = requests.get(url, headers=headers, timeout=8)
+            r = requests.get(url, timeout=10)
             root = ET.fromstring(r.content)
-            for item in root.findall(".//item")[:6]:
+            for item in root.findall(".//item")[:8]:
                 raw_title = item.find("title").text if item.find("title") is not None else ""
                 clean_title = raw_title.strip()
                 if not clean_title or clean_title.lower() in seen_titles:
+                    continue
+                if any(skip in clean_title.lower() for skip in ["bulletin", "economic survey", "working paper"]):
                     continue
                 seen_titles.add(clean_title.lower())
                 link = item.find("link").text if item.find("link") is not None else ""
@@ -96,7 +95,7 @@ def fetch_live_macro_news(limit: int = 16) -> list:
                 except Exception:
                     dt = pd.Timestamp.now(tz="UTC")
                 headlines.append({
-                    "title": f"[{source_name}] {clean_title}",
+                    "title": clean_title,
                     "link": link.strip(),
                     "published": pub_date,
                     "dt": dt
@@ -104,18 +103,18 @@ def fetch_live_macro_news(limit: int = 16) -> list:
         except Exception:
             continue
 
-    # 2. Fetch live Yahoo Finance Indian Equity News (^NSEI & RELIANCE.NS)
-    for sym in ["^NSEI", "RELIANCE.NS"]:
+    # 2. Yahoo Finance Live Ticker News Fallback/Supplement
+    for sym in ["^NSEI", "HDFCBANK.NS"]:
         try:
             yf_news = yf.Ticker(sym).news or []
             for entry in yf_news[:4]:
-                content = entry.get("content", entry)
+                content = entry.get("content") if isinstance(entry.get("content"), dict) else entry
                 clean_title = (content.get("title") or "").strip()
                 if not clean_title or clean_title.lower() in seen_titles:
                     continue
                 seen_titles.add(clean_title.lower())
                 link_obj = content.get("canonicalUrl") or content.get("clickThroughUrl") or {}
-                link = link_obj.get("url") if isinstance(link_obj, dict) else (entry.get("link") or "")
+                link = link_obj.get("url") if isinstance(link_obj, dict) else (entry.get("link") or "https://finance.yahoo.com")
                 pub_str = content.get("pubDate") or ""
                 try:
                     dt = pd.to_datetime(pub_str, utc=True) if pub_str else pd.Timestamp.now(tz="UTC")
@@ -124,7 +123,7 @@ def fetch_live_macro_news(limit: int = 16) -> list:
                 headlines.append({
                     "title": f"[Yahoo Finance] {clean_title}",
                     "link": link,
-                    "published": str(dt.strftime("%a, %d %b %Y %H:%M GMT")),
+                    "published": dt.strftime("%a, %d %b %Y %H:%M GMT"),
                     "dt": dt
                 })
         except Exception:
