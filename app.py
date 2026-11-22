@@ -37,7 +37,7 @@ html, body, [class*="css"] {
 }
 
 .block-container {
-    padding-top: 1.1rem;
+    padding-top: 3.6rem !important;
     padding-bottom: 2.2rem;
     padding-left: 1.4rem;
     padding-right: 1.4rem;
